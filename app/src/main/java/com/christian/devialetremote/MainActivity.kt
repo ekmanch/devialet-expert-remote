@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
@@ -42,6 +43,15 @@ class MainActivity : AppCompatActivity() {
     private var volumeRepeatRunnable: Runnable? = null
     private val volumeRepeatInitialDelayMs = 300L
     private val volumeRepeatIntervalMs = 100L
+
+    // While the user is actively stepping volume via VOL -/+, the amp's own
+    // status broadcasts (~1x/sec, but can land mid-hold) are ignored for a
+    // short window after each step - otherwise an in-flight broadcast reporting
+    // the pre-step volume overwrites the slider and makes it jump/jerk while
+    // held. Window is the repeat interval plus a small buffer so it comfortably
+    // covers the gap between repeat steps.
+    private val volumeButtonDebounceMs = volumeRepeatIntervalMs + 300L
+    private var lastVolumeButtonStepAtMs = 0L
 
 
     // Slider maps progress 0..90 to dB range -60..-15, in 0.5dB steps
@@ -174,6 +184,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun stepVolume(direction: Int) {
+        lastVolumeButtonStepAtMs = SystemClock.elapsedRealtime()
         seekVolume.progress = (seekVolume.progress + direction).coerceIn(0, seekVolume.max)
         sendVolume(progressToDb(seekVolume.progress))
     }
@@ -204,7 +215,9 @@ class MainActivity : AppCompatActivity() {
         updateMuteButton()
         updatePowerButton()
 
-        if (!userIsDraggingSlider) {
+        val recentlyPressedVolumeButton =
+            SystemClock.elapsedRealtime() - lastVolumeButtonStepAtMs < volumeButtonDebounceMs
+        if (!userIsDraggingSlider && !recentlyPressedVolumeButton) {
             seekVolume.progress = dbToProgress(status.volumeDb)
             txtVolumeDb.text = getString(R.string.volume_db_format, status.volumeDb)
         }
