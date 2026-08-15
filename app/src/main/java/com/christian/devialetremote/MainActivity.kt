@@ -53,6 +53,14 @@ class MainActivity : AppCompatActivity() {
     private val volumeButtonDebounceMs = volumeRepeatIntervalMs + 300L
     private var lastVolumeButtonStepAtMs = 0L
 
+    // Same race, different trigger: releasing the slider sends the new volume,
+    // but an in-flight status broadcast reporting the pre-release volume can
+    // land right after and snap the slider back before the next broadcast
+    // (with the real new value) snaps it forward again - i.e. the jump/jerk
+    // the VOL -/+ debounce above already prevents. It's the same single
+    // setVolumeDb round-trip either way, so reuse that debounce window.
+    private var lastVolumeSliderReleaseAtMs = 0L
+
 
     // Slider maps progress 0..90 to dB range -60..-15, in 0.5dB steps
     private fun progressToDb(progress: Int): Double = (progress * 0.5) - 60.0
@@ -102,6 +110,7 @@ class MainActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) { userIsDraggingSlider = true }
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 userIsDraggingSlider = false
+                lastVolumeSliderReleaseAtMs = SystemClock.elapsedRealtime()
                 val db = progressToDb(seekBar?.progress ?: 0)
                 sendVolume(db)
             }
@@ -228,7 +237,9 @@ class MainActivity : AppCompatActivity() {
 
         val recentlyPressedVolumeButton =
             SystemClock.elapsedRealtime() - lastVolumeButtonStepAtMs < volumeButtonDebounceMs
-        if (!userIsDraggingSlider && !recentlyPressedVolumeButton) {
+        val recentlyReleasedSlider =
+            SystemClock.elapsedRealtime() - lastVolumeSliderReleaseAtMs < volumeButtonDebounceMs
+        if (!userIsDraggingSlider && !recentlyPressedVolumeButton && !recentlyReleasedSlider) {
             seekVolume.progress = dbToProgress(status.volumeDb)
             txtVolumeDb.text = getString(R.string.volume_db_format, status.volumeDb)
         }
