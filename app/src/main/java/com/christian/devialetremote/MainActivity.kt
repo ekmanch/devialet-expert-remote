@@ -31,9 +31,10 @@ class MainActivity : AppCompatActivity() {
     private var isMuted = false
     private var isPoweredOn = true
 
-    // Slider maps progress 0..45 to dB range -60..-15
-    private fun progressToDb(progress: Int): Double = (progress - 60).toDouble()
-    private fun dbToProgress(db: Double): Int = (db + 60).toInt().coerceIn(0, 45)
+
+    // Slider maps progress 0..90 to dB range -60..-15, in 0.5dB steps
+    private fun progressToDb(progress: Int): Double = (progress * 0.5) - 60.0
+    private fun dbToProgress(db: Double): Int = ((db + 60.0) * 2).toInt().coerceIn(0, 90)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         seekVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val db = progressToDb(progress)
-                txtVolumeDb.text = "${db.toInt()} dB"
+                txtVolumeDb.text = String.format("%.1f dB", db)
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) { userIsDraggingSlider = true }
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
@@ -79,11 +80,11 @@ class MainActivity : AppCompatActivity() {
         })
 
         findViewById<Button>(R.id.btnVolUp).setOnClickListener {
-            seekVolume.progress = (seekVolume.progress + 2).coerceAtMost(seekVolume.max)
+            seekVolume.progress = (seekVolume.progress + 1).coerceAtMost(seekVolume.max)
             sendVolume(progressToDb(seekVolume.progress))
         }
         findViewById<Button>(R.id.btnVolDown).setOnClickListener {
-            seekVolume.progress = (seekVolume.progress - 2).coerceAtLeast(0)
+            seekVolume.progress = (seekVolume.progress - 1).coerceAtLeast(0)
             sendVolume(progressToDb(seekVolume.progress))
         }
 
@@ -152,7 +153,7 @@ class MainActivity : AppCompatActivity() {
 
         if (!userIsDraggingSlider) {
             seekVolume.progress = dbToProgress(status.volumeDb)
-            txtVolumeDb.text = "${status.volumeDb.toInt()} dB"
+            txtVolumeDb.text = String.format("%.1f dB", status.volumeDb)
         }
 
         rebuildSourceButtons(status)

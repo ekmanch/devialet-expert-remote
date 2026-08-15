@@ -54,20 +54,20 @@ class DevialetStatusListener(
     }
 
     private fun parseStatus(data: ByteArray, length: Int): DevialetStatus? {
-        if (length < 320) return null
+        if (length < 566) return null
         return try {
             val name = String(data, 19, 31, Charsets.UTF_8).trim('\u0000', ' ')
-            val sourceIndex = (data[308].toInt() and 0x3C) shr 2
-            val sources = ArrayList<DevialetSource>(15)
-            for (i in 0 until 15) {
+            val sourceIndex = (data[563].toInt() and 0x3C) shr 2
+            val sources = ArrayList<DevialetSource>(30)
+            for (i in 0 until 30) {
                 val enabledChar = (data[52 + i * 17].toInt() and 0xFF).toChar()
                 val isEnabled = enabledChar == '1'
                 val srcName = String(data, 53 + i * 17, 16, Charsets.UTF_8).trim('\u0000', ' ')
                 sources.add(DevialetSource(srcName, i, isEnabled, i == sourceIndex))
             }
-            val power = (data[307].toInt() and 0x80) != 0
-            val muted = (data[308].toInt() and 0x02) != 0
-            val volume = data[310].toInt() and 0xFF
+            val power = (data[562].toInt() and 0x80) != 0
+            val muted = (data[563].toInt() and 0x02) != 0
+            val volume = data[565].toInt() and 0xFF
             DevialetStatus(name, power, muted, volume, sourceIndex, sources)
         } catch (e: Exception) {
             null
