@@ -1,12 +1,12 @@
 package com.christian.devialetremote
 
+import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -58,6 +58,12 @@ class MainActivity : AppCompatActivity() {
     private fun progressToDb(progress: Int): Double = (progress * 0.5) - 60.0
     private fun dbToProgress(db: Double): Int = ((db + 60.0) * 2).toInt().coerceIn(0, 90)
 
+    // Suppresses "Button does not override performClick" - it's a stock Button,
+    // not a custom View subclass, and it already inherits a working
+    // performClick() from View. We do call it explicitly below (on ACTION_UP),
+    // which satisfies the actual accessibility concern; subclassing Button just
+    // to silence this specific lint check isn't worth the complexity.
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -104,8 +110,16 @@ class MainActivity : AppCompatActivity() {
         val btnVolUp = findViewById<Button>(R.id.btnVolUp)
         val btnVolDown = findViewById<Button>(R.id.btnVolDown)
 
-        btnVolUp.setOnTouchListener { v, event -> handleVolumeButtonTouch(v, event, +1) }
-        btnVolDown.setOnTouchListener { v, event -> handleVolumeButtonTouch(v, event, -1) }
+        btnVolUp.setOnTouchListener { v, event ->
+            handleVolumeButtonTouch(event, +1)
+            if (event.actionMasked == MotionEvent.ACTION_UP) v.performClick()
+            true
+        }
+        btnVolDown.setOnTouchListener { v, event ->
+            handleVolumeButtonTouch(event, -1)
+            if (event.actionMasked == MotionEvent.ACTION_UP) v.performClick()
+            true
+        }
 
         btnMute.setOnClickListener {
             isMuted = !isMuted
@@ -152,17 +166,14 @@ class MainActivity : AppCompatActivity() {
      * Handles VOL -/+ touch events: a quick tap does a single 0.5dB step (fires
      * on ACTION_DOWN so it's instant), and holding the button down auto-repeats
      * steps at [volumeRepeatIntervalMs] after an initial [volumeRepeatInitialDelayMs]
-     * delay, until the finger lifts or leaves the button.
+     * delay, until the finger lifts or leaves the button. (performClick() is
+     * called separately, from the setOnTouchListener lambda itself.)
      */
-    private fun handleVolumeButtonTouch(view: View, event: MotionEvent, direction: Int): Boolean {
+    private fun handleVolumeButtonTouch(event: MotionEvent, direction: Int) {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> startVolumeRepeat(direction)
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                stopVolumeRepeat()
-                view.performClick()
-            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> stopVolumeRepeat()
         }
-        return true
     }
 
     private fun startVolumeRepeat(direction: Int) {
