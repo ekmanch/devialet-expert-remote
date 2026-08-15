@@ -2,6 +2,10 @@ package com.christian.devialetremote
 
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.MotionEvent
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -31,6 +35,13 @@ class MainActivity : AppCompatActivity() {
     private var userIsDraggingSlider = false
     private var isMuted = false
     private var isPoweredOn = true
+
+    // Press-and-hold repeat for VOL -/+. Steps are 0.5dB (one slider progress
+    // unit), so a 100ms interval works out to 5dB/sec while held.
+    private val volumeRepeatHandler = Handler(Looper.getMainLooper())
+    private var volumeRepeatRunnable: Runnable? = null
+    private val volumeRepeatInitialDelayMs = 300L
+    private val volumeRepeatIntervalMs = 100L
 
 
     // Slider maps progress 0..90 to dB range -60..-15, in 0.5dB steps
@@ -80,14 +91,11 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        findViewById<Button>(R.id.btnVolUp).setOnClickListener {
-            seekVolume.progress = (seekVolume.progress + 1).coerceAtMost(seekVolume.max)
-            sendVolume(progressToDb(seekVolume.progress))
-        }
-        findViewById<Button>(R.id.btnVolDown).setOnClickListener {
-            seekVolume.progress = (seekVolume.progress - 1).coerceAtLeast(0)
-            sendVolume(progressToDb(seekVolume.progress))
-        }
+        val btnVolUp = findViewById<Button>(R.id.btnVolUp)
+        val btnVolDown = findViewById<Button>(R.id.btnVolDown)
+
+        btnVolUp.setOnTouchListener { v, event -> handleVolumeButtonTouch(v, event, +1) }
+        btnVolDown.setOnTouchListener { v, event -> handleVolumeButtonTouch(v, event, -1) }
 
         btnMute.setOnClickListener {
             isMuted = !isMuted
@@ -128,6 +136,46 @@ class MainActivity : AppCompatActivity() {
         requireIp {
             network.submit { runCatching { controller.setVolumeDb(db) } }
         }
+    }
+
+    /**
+     * Handles VOL -/+ touch events: a quick tap does a single 0.5dB step (fires
+     * on ACTION_DOWN so it's instant), and holding the button down auto-repeats
+     * steps at [volumeRepeatIntervalMs] after an initial [volumeRepeatInitialDelayMs]
+     * delay, until the finger lifts or leaves the button.
+     */
+    private fun handleVolumeButtonTouch(view: View, event: MotionEvent, direction: Int): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> startVolumeRepeat(direction)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                stopVolumeRepeat()
+                view.performClick()
+            }
+        }
+        return true
+    }
+
+    private fun startVolumeRepeat(direction: Int) {
+        stopVolumeRepeat()
+        stepVolume(direction) // immediate response to the initial press
+        val runnable = object : Runnable {
+            override fun run() {
+                stepVolume(direction)
+                volumeRepeatHandler.postDelayed(this, volumeRepeatIntervalMs)
+            }
+        }
+        volumeRepeatRunnable = runnable
+        volumeRepeatHandler.postDelayed(runnable, volumeRepeatInitialDelayMs)
+    }
+
+    private fun stopVolumeRepeat() {
+        volumeRepeatRunnable?.let { volumeRepeatHandler.removeCallbacks(it) }
+        volumeRepeatRunnable = null
+    }
+
+    private fun stepVolume(direction: Int) {
+        seekVolume.progress = (seekVolume.progress + direction).coerceIn(0, seekVolume.max)
+        sendVolume(progressToDb(seekVolume.progress))
     }
 
     private fun updateMuteButton() {
@@ -199,6 +247,7 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         statusListener.stop()
+        stopVolumeRepeat() // don't keep firing volume changes while backgrounded
     }
 
     override fun onDestroy() {
