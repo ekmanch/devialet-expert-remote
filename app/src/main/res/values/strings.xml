@@ -1,3 +1,30 @@
 <resources>
     <string name="app_name">Devialet Remote</string>
+
+    <!-- activity_main.xml -->
+    <string name="title_app">Devialet Expert Pro Remote</string>
+    <string name="hint_amp_ip">Amp IP address, e.g. 192.168.1.50</string>
+    <string name="btn_save_ip">Save IP</string>
+    <string name="status_placeholder">No status received yet.</string>
+    <string name="label_volume">Volume</string>
+    <string name="volume_db_default">-20 dB</string>
+    <string name="btn_vol_down">Vol -</string>
+    <string name="btn_vol_up">Vol +</string>
+    <string name="btn_mute">Mute</string>
+    <string name="btn_power">Power</string>
+    <string name="label_sources">Sources</string>
+    <string name="sources_hint">(populates once the amp\'s status broadcast is received)</string>
+
+    <!-- MainActivity.kt -->
+    <string name="toast_enter_ip_first">Enter an IP address first</string>
+    <string name="toast_saved_talking">Saved. Talking to %1$s</string>
+    <string name="toast_enter_ip_before_control">Enter and save the amp\'s IP address first</string>
+    <string name="btn_unmute">Unmute</string>
+    <string name="btn_power_off">Power Off</string>
+    <string name="btn_power_on">Power On</string>
+    <string name="status_format">%1$s @ %2$s\nPower: %3$s  |  Muted: %4$b  |  Source: %5$s</string>
+    <string name="power_on">On</string>
+    <string name="power_off">Off</string>
+    <string name="volume_db_format">%1$.1f dB</string>
+    <string name="source_active_format">%1$s  (active)</string>
 </resources>

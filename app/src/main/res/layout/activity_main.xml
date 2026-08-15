@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -12,7 +13,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Devialet Expert Pro Remote"
+            android:text="@string/title_app"
             android:textSize="20sp"
             android:textStyle="bold"
             android:layout_marginBottom="16dp" />
@@ -21,7 +22,7 @@
             android:id="@+id/editIp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Amp IP address, e.g. 192.168.1.50"
+            android:hint="@string/hint_amp_ip"
             android:inputType="text"
             android:importantForAutofill="no" />
 
@@ -30,28 +31,28 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Save IP" />
+            android:text="@string/btn_save_ip" />
 
         <TextView
             android:id="@+id/txtStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="No status received yet."
+            android:text="@string/status_placeholder"
             android:textSize="14sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Volume"
+            android:text="@string/label_volume"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/txtVolumeDb"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="-20 dB"
+            android:text="@string/volume_db_default"
             android:textSize="16sp" />
 
         <SeekBar
@@ -65,35 +66,38 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="8dp"
+            tools:ignore="ButtonStyle">
 
             <Button
                 android:id="@+id/btnVolDown"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Vol -" />
+                android:text="@string/btn_vol_down" />
 
             <Button
                 android:id="@+id/btnVolUp"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Vol +" />
+                android:layout_marginStart="8dp"
+                android:text="@string/btn_vol_up" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="20dp">
+            android:layout_marginTop="20dp"
+            tools:ignore="ButtonStyle">
 
             <Button
                 android:id="@+id/btnMute"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Mute" />
+                android:text="@string/btn_mute" />
 
             <Button
                 android:id="@+id/btnPower"
@@ -101,20 +105,20 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:text="Power" />
+                android:text="@string/btn_power" />
         </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Sources"
+            android:text="@string/label_sources"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="(populates once the amp's status broadcast is received)"
+            android:text="@string/sources_hint"
             android:textSize="12sp" />
 
         <LinearLayout

@@ -30,14 +30,14 @@ class DevialetStatusListener(
                     val packet = DatagramPacket(buf, buf.size)
                     try {
                         s.receive(packet)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         if (!running) break else continue
                     }
                     parseStatus(packet.data, packet.length)?.let {
                         onStatus(it, packet.address?.hostAddress ?: "")
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Bind/setup failed - the app just won't get live status; direct
                 // control commands (which don't need this listener) still work.
             }
@@ -69,7 +69,7 @@ class DevialetStatusListener(
             val muted = (data[563].toInt() and 0x02) != 0
             val volume = data[565].toInt() and 0xFF
             DevialetStatus(name, power, muted, volume, sourceIndex, sources)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

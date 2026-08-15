@@ -22,15 +22,30 @@ class DevialetController(@Volatile var deviceIp: String) {
     companion object {
         const val STATUS_PORT = 45454   // amp -> us, broadcasts status ~1x/sec
         const val COMMAND_PORT = 45455  // us -> amp, control commands
+
+        // Channel switching is NON-LINEAR: the source index reported in the
+        // amp's status broadcast (DevialetSource.index, 0-14) does not match
+        // the command value the amp expects when selecting that source. This
+        // maps status-broadcast index -> command value, per community
+        // reverse-engineering (gnulabis/devimote, andrewmgrossman/devialet_expert_remote).
+        // Channel 1 (Phono) isn't in this map - it needs hardcoded bytes, see below.
+        private val SOURCE_COMMAND_VALUE = mapOf(
+            0 to -1,  // Optical 1
+            2 to 0,   // UPnP
+            3 to 3,   // Roon Ready
+            4 to 4,   // AirPlay
+            5 to 5,   // Spotify
+            14 to 14  // Air (Bluetooth)
+        )
     }
 
     private val packetCounter = AtomicInteger(0)
     private val commandCounter = AtomicInteger(0)
 
     // ---- CRC16/CCITT-FALSE (poly 0x1021, init 0xFFFF) ----
-    private fun crc16(data: ByteArray, length: Int): Int {
+    private fun crc16(data: ByteArray): Int {
         var crc = 0xFFFF
-        for (i in 0 until length) {
+        for (i in 0 until 12) {
             crc = crc xor ((data[i].toInt() and 0xFF) shl 8)
             repeat(8) {
                 crc = if ((crc and 0x8000) != 0) {
@@ -79,7 +94,7 @@ class DevialetController(@Volatile var deviceIp: String) {
         data[8] = byte8.toByte()
         data[9] = byte9.toByte()
 
-        val crc = crc16(data, 12)
+        val crc = crc16(data)
         data[12] = ((crc shr 8) and 0xFF).toByte()
         data[13] = (crc and 0xFF).toByte()
         return data
@@ -109,9 +124,20 @@ class DevialetController(@Volatile var deviceIp: String) {
     }
 
     fun selectSource(index: Int) {
-        val outVal = 0x4000 or (index shl 5)
+        // Phono (status index 1) doesn't follow the standard formula - the
+        // official app sends these hardcoded bytes instead (discovered via
+        // Wireshark analysis, see gnulabis/devimote issue #2).
+        if (index == 1) {
+            sendTwice(0x00, 0x05, 0x3F, 0x80)
+            return
+        }
+        // Fall back to passing the raw index through for anything not in the
+        // known map (e.g. custom/uncommon inputs) - matches prior behavior
+        // for those, may need adjusting per-amp/firmware.
+        val cmdValue = SOURCE_COMMAND_VALUE[index] ?: index
+        val outVal = 0x4000 or (cmdValue shl 5)
         val hi = (outVal shr 8) and 0xFF
-        val lo = if (index > 7) (outVal and 0xFF) shr 1 else outVal and 0xFF
+        val lo = if (cmdValue > 7) (outVal and 0xFF) shr 1 else outVal and 0xFF
         sendTwice(0x00, 0x05, hi, lo)
     }
 }

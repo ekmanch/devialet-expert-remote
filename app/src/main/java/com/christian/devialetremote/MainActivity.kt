@@ -9,6 +9,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -58,18 +59,18 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnSaveIp).setOnClickListener {
             val ip = editIp.text.toString().trim()
             if (ip.isEmpty()) {
-                Toast.makeText(this, "Enter an IP address first", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_enter_ip_first, Toast.LENGTH_SHORT).show()
             } else {
-                prefs.edit().putString("amp_ip", ip).apply()
+                prefs.edit { putString("amp_ip", ip) }
                 controller.deviceIp = ip
-                Toast.makeText(this, "Saved. Talking to $ip", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_saved_talking, ip), Toast.LENGTH_SHORT).show()
             }
         }
 
         seekVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val db = progressToDb(progress)
-                txtVolumeDb.text = String.format("%.1f dB", db)
+                txtVolumeDb.text = getString(R.string.volume_db_format, db)
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) { userIsDraggingSlider = true }
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
@@ -117,7 +118,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun requireIp(action: () -> Unit) {
         if (controller.deviceIp.isBlank()) {
-            Toast.makeText(this, "Enter and save the amp's IP address first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_enter_ip_before_control, Toast.LENGTH_SHORT).show()
         } else {
             action()
         }
@@ -130,21 +131,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateMuteButton() {
-        btnMute.text = if (isMuted) "Unmute" else "Mute"
+        btnMute.setText(if (isMuted) R.string.btn_unmute else R.string.btn_mute)
     }
 
     private fun updatePowerButton() {
-        btnPower.text = if (isPoweredOn) "Power Off" else "Power On"
+        btnPower.setText(if (isPoweredOn) R.string.btn_power_off else R.string.btn_power_on)
     }
 
     private fun applyStatus(status: DevialetStatus, senderIp: String) {
         val savedIp = editIp.text.toString().trim()
         if (savedIp.isNotEmpty() && senderIp != savedIp) return // ignore other amps on the LAN
 
-        txtStatus.text = "${status.deviceName} @ $senderIp\n" +
-                "Power: ${if (status.powerOn) "On" else "Off"}  |  " +
-                "Muted: ${status.muted}  |  " +
-                "Source: ${status.currentSourceName}"
+        txtStatus.text = getString(
+            R.string.status_format,
+            status.deviceName,
+            senderIp,
+            getString(if (status.powerOn) R.string.power_on else R.string.power_off),
+            status.muted,
+            status.currentSourceName
+        )
 
         isMuted = status.muted
         isPoweredOn = status.powerOn
@@ -153,19 +158,29 @@ class MainActivity : AppCompatActivity() {
 
         if (!userIsDraggingSlider) {
             seekVolume.progress = dbToProgress(status.volumeDb)
-            txtVolumeDb.text = String.format("%.1f dB", status.volumeDb)
+            txtVolumeDb.text = getString(R.string.volume_db_format, status.volumeDb)
         }
 
         rebuildSourceButtons(status)
     }
 
     private fun rebuildSourceButtons(status: DevialetStatus) {
-        if (sourcesContainer.tag == status.enabledSources.map { it.name }) return // avoid rebuilding every second
+        // Tag includes both name AND selection state, so a source change
+        // (not just the set of sources changing) triggers a rebuild and the
+        // "(ACTIVE)" label stays in sync. Comparing names alone meant this
+        // always short-circuited after the first draw, since the list of
+        // available sources doesn't change when you just switch inputs.
+        val tagKey = status.enabledSources.map { it.name to it.isSelected }
+        if (sourcesContainer.tag == tagKey) return // avoid rebuilding every second
         sourcesContainer.removeAllViews()
-        sourcesContainer.tag = status.enabledSources.map { it.name }
+        sourcesContainer.tag = tagKey
         for (source in status.enabledSources) {
             val button = Button(this).apply {
-                text = if (source.isSelected) "${source.name}  (active)" else source.name
+                text = if (source.isSelected) {
+                    getString(R.string.source_active_format, source.name)
+                } else {
+                    source.name
+                }
                 setOnClickListener {
                     requireIp {
                         network.submit { runCatching { controller.selectSource(source.index) } }
