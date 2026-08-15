@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.DevialetRemote" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">#212121</item>
+        <item name="colorPrimaryDark">#000000</item>
+        <item name="colorAccent">#03A9F4</item>
+    </style>
+</resources>
