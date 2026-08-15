@@ -1,4 +1,4 @@
-# Devialet Expert Pro Remote (minimal Android app)
+# Devialet Expert Pro Remote (Android App)
 
 A bare-bones Android app to control a Devialet Expert / Expert Pro over the
 local network: volume, mute, power, and source selection. Built because the
