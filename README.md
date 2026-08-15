@@ -12,7 +12,7 @@ This talks to the amp directly using its local UDP control protocol
 ## What it does
 
 - Manual IP entry for the amp (saved locally)
-- Volume slider (-60 dB to 0 dB) + step buttons
+- Volume slider (-60 dB to -15 dB) + step buttons
 - Mute / unmute toggle
 - Power on/off toggle
 - Source buttons, auto-populated once the amp's status broadcast is received
@@ -49,10 +49,10 @@ Neither path requires Google Play or any store listing.
 
 ## Adjusting it to taste
 
-- **Volume range:** the slider currently covers -60 dB to 0 dB
+- **Volume range:** the slider currently covers -60 dB to -15 dB
   (`progressToDb`/`dbToProgress` in `MainActivity.kt`). Devialet's protocol
   supports up to +30 dB; `setVolumeDb`'s `maxDb` parameter in
-  `DevialetController.kt` is a safety clamp, currently 0 dB.
+  `DevialetController.kt` is a safety clamp, currently -15 dB.
 - **Source list:** pulled live from the amp's status broadcast, so it'll
   automatically reflect whatever inputs you've named/enabled in the amp's own
   configuration menu.

@@ -58,7 +58,7 @@
             android:id="@+id/seekVolume"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="60"
+            android:max="45"
             android:progress="40" />
 
         <LinearLayout

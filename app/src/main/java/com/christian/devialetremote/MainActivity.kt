@@ -31,9 +31,9 @@ class MainActivity : AppCompatActivity() {
     private var isMuted = false
     private var isPoweredOn = true
 
-    // Slider maps progress 0..60 to dB range -60..0
+    // Slider maps progress 0..45 to dB range -60..-15
     private fun progressToDb(progress: Int): Double = (progress - 60).toDouble()
-    private fun dbToProgress(db: Double): Int = (db + 60).toInt().coerceIn(0, 60)
+    private fun dbToProgress(db: Double): Int = (db + 60).toInt().coerceIn(0, 45)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

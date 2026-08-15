@@ -101,7 +101,7 @@ class DevialetController(@Volatile var deviceIp: String) {
     fun setMute(muted: Boolean) = sendTwice(if (muted) 1 else 0, 0x07)
 
     /** maxDb caps how loud this app will ever ask for - safety margin, adjust if you want more headroom. */
-    fun setVolumeDb(dbIn: Double, maxDb: Double = 0.0) {
+    fun setVolumeDb(dbIn: Double, maxDb: Double = -15.0) {
         val db = dbIn.coerceAtMost(maxDb)
         var vol = dbConvert(db)
         if (db < 0) vol = vol or 0x8000
