@@ -37,6 +37,13 @@ class DevialetController(@Volatile var deviceIp: String) {
             5 to 5,   // Spotify
             14 to 14  // Air (Bluetooth)
         )
+
+        // The amp doesn't apply a consistent startup volume across inputs on
+        // its own (observed -40dB on Optical 1 vs -38dB on other sources) -
+        // this is the amp's own per-input volume memory, not something this
+        // remote sets elsewhere. Forcing this after every source switch keeps
+        // the volume predictable/consistent regardless of source.
+        private const val SOURCE_SWITCH_VOLUME_DB = -40.0
     }
 
     private val packetCounter = AtomicInteger(0)
@@ -129,15 +136,18 @@ class DevialetController(@Volatile var deviceIp: String) {
         // Wireshark analysis, see gnulabis/devimote issue #2).
         if (index == 1) {
             sendTwice(0x00, 0x05, 0x3F, 0x80)
-            return
+        } else {
+            // Fall back to passing the raw index through for anything not in
+            // the known map (e.g. custom/uncommon inputs) - matches prior
+            // behavior for those, may need adjusting per-amp/firmware.
+            val cmdValue = SOURCE_COMMAND_VALUE[index] ?: index
+            val outVal = 0x4000 or (cmdValue shl 5)
+            val hi = (outVal shr 8) and 0xFF
+            val lo = if (cmdValue > 7) (outVal and 0xFF) shr 1 else outVal and 0xFF
+            sendTwice(0x00, 0x05, hi, lo)
         }
-        // Fall back to passing the raw index through for anything not in the
-        // known map (e.g. custom/uncommon inputs) - matches prior behavior
-        // for those, may need adjusting per-amp/firmware.
-        val cmdValue = SOURCE_COMMAND_VALUE[index] ?: index
-        val outVal = 0x4000 or (cmdValue shl 5)
-        val hi = (outVal shr 8) and 0xFF
-        val lo = if (cmdValue > 7) (outVal and 0xFF) shr 1 else outVal and 0xFF
-        sendTwice(0x00, 0x05, hi, lo)
+        // Applies to every source, not just some - overrides whatever
+        // startup volume the amp would otherwise pick for this input.
+        setVolumeDb(SOURCE_SWITCH_VOLUME_DB)
     }
 }
