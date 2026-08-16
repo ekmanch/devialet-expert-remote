@@ -22,22 +22,33 @@
     <string name="btn_vol_down">−</string>
     <string name="btn_vol_up">+</string>
 
-    <!-- Sound & Room -->
-    <string name="label_sound_room">Sound &amp; Room</string>
+    <!-- Tabs -->
+    <string name="tab_control">Control</string>
+    <string name="tab_sound">Sound</string>
+
+    <!-- Sound tab: Speaker Matching -->
+    <string name="label_speaker_matching">Speaker Matching</string>
     <string name="toggle_sam_name">SAM</string>
-    <string name="toggle_night_name">Night Mode</string>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>
     <string name="sam_state_on_format">On · %1$d%%</string>
-    <string name="toggle_chevron">›</string>
+    <string name="label_level">Level</string>
+    <string name="sam_level_value_format">%1$d%%</string>
 
-    <!-- SAM level drawer -->
-    <string name="sam_drawer_eyebrow">SOUND &amp; ROOM</string>
-    <string name="sam_drawer_title">SAM</string>
-    <string name="sam_drawer_desc">Speaker Active Matching adapts the amplifier\'s output to your speakers\' real-world response, tightening bass and improving accuracy.</string>
-    <string name="sam_drawer_level_label">Level</string>
-    <string name="sam_drawer_level_value_format">%1$d%%</string>
-    <string name="sam_drawer_done">Done</string>
+    <!-- Sound tab: Room -->
+    <string name="label_room">Room</string>
+    <string name="toggle_night_name">Night Mode</string>
+
+    <!-- Sound tab: Tone -->
+    <string name="label_tone">Tone</string>
+    <string name="label_bass">Bass</string>
+    <string name="label_treble">Treble</string>
+    <string name="tone_range_hint">−18 dB to +18 dB</string>
+    <string name="tone_min_label">−18</string>
+    <string name="tone_max_label">+18</string>
+    <string name="tone_value_format">%1$s%2$d dB</string>
+    <string name="tone_value_default">0 dB</string>
+    <string name="sound_footer_note">Bass and treble apply to the active source</string>
 
     <!-- Mute / power -->
     <string name="btn_mute">Mute</string>
@@ -50,8 +61,8 @@
     <string name="label_source">Source</string>
     <string name="source_active_label">Active source</string>
     <string name="source_icon_default">◉</string>
-    <string name="source_chevron">▾</string>
-    <string name="sources_empty">Waiting for the amp\'s source list…</string>
+    <string name="source_chevron">›</string>
+    <string name="source_sheet_title">Select source</string>
 
     <!-- Amplifier picker dialog -->
     <string name="dialog_choose_amp_title">Choose Amplifier</string>

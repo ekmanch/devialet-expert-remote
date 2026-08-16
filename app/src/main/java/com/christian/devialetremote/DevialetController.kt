@@ -173,8 +173,8 @@ class DevialetController(@Volatile var deviceIp: String) {
 
     // ---- Not yet wired: SAM level (0-100%) ----
     //
-    // Same situation as above - MainActivity's SAM-level SeekBar (in the
-    // slide-out drawer) only updates local UI state, nothing is sent. This
+    // Same situation as above - MainActivity's SAM-level SeekBar (inline on
+    // the Sound tab) only updates local UI state, nothing is sent. This
     // one's a range value rather than a toggle, so it almost certainly needs
     // a payload byte (or two) carrying the percentage, closer in shape to
     // setVolumeDb's byte8/byte9 pair than setMute/setPower's plain on/off.
@@ -184,4 +184,16 @@ class DevialetController(@Volatile var deviceIp: String) {
     // protocol doesn't always use the obvious encoding).
     //
     // fun setSamLevel(percent: Int) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */, /* TODO: byte8 */, /* TODO: byte9 */)
+
+    // ---- Not yet wired: Bass / Treble ----
+    //
+    // Same situation as SAM/Night Mode/SAM level above - MainActivity's Bass
+    // and Treble SeekBars (Sound tab) only update local UI state, nothing is
+    // sent. Each is a signed dB value (-18..+18, see MainActivity.toneMinDb/
+    // toneMaxDb) rather than a 0-100% range, so the encoding is more likely
+    // to resemble setVolumeDb's signed dbConvert() path than SAM level's
+    // plain percentage - but that's a guess until it's actually sniffed.
+    //
+    // fun setBassDb(db: Int) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */, /* TODO: byte8 */, /* TODO: byte9 */)
+    // fun setTrebleDb(db: Int) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */, /* TODO: byte8 */, /* TODO: byte9 */)
 }

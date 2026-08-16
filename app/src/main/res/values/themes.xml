@@ -2,12 +2,50 @@
     <!-- Not DayNight on purpose: the redesign is a fixed dark, copper-accented
          palette tied to the amp's own hardware finish, not something that
          should flip to a light theme under system settings. -->
-    <style name="Theme.DevialetRemote" parent="Theme.AppCompat.NoActionBar">
+    <style name="Theme.DevialetRemote" parent="Theme.MaterialComponents.NoActionBar">
         <item name="colorPrimary">@color/color_surface</item>
         <item name="colorPrimaryDark">@color/color_page</item>
         <item name="colorAccent">@color/color_copper_bright</item>
         <item name="android:windowBackground">@color/color_page</item>
         <item name="android:textColorPrimary">@color/color_text</item>
         <item name="android:textColorSecondary">@color/color_text_dim</item>
+
+        <!-- Material color roles: Theme.MaterialComponents.NoActionBar only
+             defines its OWN default dark palette (colorSurface ~ #121212)
+             for these - not our copper/graphite one. Any Material widget
+             that resolves ?attr/colorSurface, like BottomSheetDialog's
+             internal MaterialShapeDrawable, was falling back to that
+             default instead of our real page color. That mismatch, plus the
+             elevation overlay below, is what produced the washed-out light
+             grey sheet. Pinning these keeps every current and future
+             Material component on-brand automatically. -->
+        <item name="colorSurface">@color/color_bg_2</item>
+        <item name="colorOnSurface">@color/color_text</item>
+        <item name="android:colorBackground">@color/color_page</item>
+        <item name="colorOnBackground">@color/color_text</item>
+
+        <!-- Stops Material's dark-theme "elevation overlay" - a translucent
+             white wash it applies to elevated dark surfaces to simulate a
+             light source - from lightening the bottom sheet (or any future
+             Card/Dialog). Our palette already expresses elevation with
+             distinct surface tones (color_surface, color_surface_2,
+             color_surface_3), so the overlay was redundant and was the
+             other half of the "light grey sheet" symptom. -->
+        <item name="elevationOverlayEnabled">false</item>
+    </style>
+
+    <!-- Used only by the source-picker BottomSheetDialog (see
+         MainActivity.showSourceSheet). bottomSheetStyle swaps in our own
+         background (rounded top corners, matching page color) in place of
+         the library's default. backgroundTint below is what actually
+         anchors the fill color BottomSheetDialog paints under the hood -
+         colorSurface above is the belt, this is the suspenders. -->
+    <style name="ThemeOverlay.DevialetRemote.BottomSheet" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.DevialetRemote.BottomSheet</item>
+    </style>
+
+    <style name="Widget.DevialetRemote.BottomSheet" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="android:background">@drawable/bg_sheet</item>
+        <item name="backgroundTint">@color/color_bg_2</item>
     </style>
 </resources>

@@ -1,107 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.drawerlayout.widget.DrawerLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Plain ScrollView root now (no DrawerLayout): the SAM side-drawer is gone
+     - SAM's level slider lives inline on the Sound tab - and the source
+     picker is a self-contained Dialog (see MainActivity.showSourceSheet),
+     not a drawer, so nothing here needs edge-swipe gesture space anymore. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/color_page"
+    android:fillViewport="true">
 
-    <!-- Main content. Spacing is tightened deliberately so most phones show
-         this without scrolling, but it stays inside a ScrollView (fillViewport
-         so it still stretches to fill a tall screen) rather than a fixed
-         layout - on a short/small-density screen it scrolls instead of
-         clipping controls off the bottom. -->
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/color_page"
-        android:fillViewport="true">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="14dp">
 
+        <!-- Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wordmark"
+            android:textColor="@color/color_copper_bright"
+            android:textSize="12sp"
+            android:letterSpacing="0.2"
+            android:fontFamily="@font/space_grotesk_semibold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="10dp"
+            android:text="@string/title_app"
+            android:textColor="@color/color_text"
+            android:textSize="22sp"
+            android:fontFamily="@font/space_grotesk_semibold" />
+
+        <!-- Device card -->
+        <LinearLayout
+            android:id="@+id/deviceCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="12dp">
+
+            <View
+                android:id="@+id/deviceDot"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/dot_disconnected" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txtDeviceName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/device_none_selected"
+                    android:textColor="@color/color_text"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtDeviceSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/device_tap_to_choose"
+                    android:textColor="@color/color_text_dim"
+                    android:textSize="12.5sp"
+                    android:fontFamily="@font/jetbrains_mono_regular" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/device_change"
+                android:textColor="@color/color_text_faint"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+        <!-- Segmented control: Control / Sound. Sits far from any screen
+             edge on purpose - switching views this way can never collide
+             with the system back gesture the way the old SAM side-drawer
+             did. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="14dp">
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal"
+            android:background="@drawable/shape_segment_track"
+            android:padding="4dp">
 
-            <!-- Header -->
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/segControl"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/wordmark"
+                android:layout_weight="1"
+                android:paddingTop="9dp"
+                android:paddingBottom="9dp"
+                android:gravity="center"
+                android:background="@drawable/shape_segment_selected"
+                android:text="@string/tab_control"
                 android:textColor="@color/color_copper_bright"
-                android:textSize="12sp"
-                android:letterSpacing="0.2"
-                android:fontFamily="@font/space_grotesk_semibold" />
+                android:textSize="13.5sp"
+                android:fontFamily="@font/space_grotesk_semibold"
+                android:clickable="true"
+                android:focusable="true" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/segSound"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:layout_marginBottom="10dp"
-                android:text="@string/title_app"
-                android:textColor="@color/color_text"
-                android:textSize="22sp"
-                android:fontFamily="@font/space_grotesk_semibold" />
-
-            <!-- Device card -->
-            <LinearLayout
-                android:id="@+id/deviceCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/bg_card"
+                android:layout_weight="1"
+                android:paddingTop="9dp"
+                android:paddingBottom="9dp"
+                android:gravity="center"
+                android:text="@string/tab_sound"
+                android:textColor="@color/color_text_dim"
+                android:textSize="13.5sp"
+                android:fontFamily="@font/space_grotesk_semibold"
                 android:clickable="true"
-                android:focusable="true"
-                android:padding="12dp">
+                android:focusable="true" />
+        </LinearLayout>
 
-                <View
-                    android:id="@+id/deviceDot"
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:layout_marginEnd="12dp"
-                    android:background="@drawable/dot_disconnected" />
+        <!-- ============ CONTROL TAB ============
+             Deliberately kept to just Volume, Mute/Power and Source - this is
+             the view spending 98% of screen time, so it stays short enough to
+             need no scrolling on a normal-size phone. Anything less urgent
+             (SAM, Night Mode, Bass/Treble) lives on the Sound tab instead. -->
+        <LinearLayout
+            android:id="@+id/viewControl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="visible">
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/txtDeviceName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/device_none_selected"
-                        android:textColor="@color/color_text"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/txtDeviceSub"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/device_tap_to_choose"
-                        android:textColor="@color/color_text_dim"
-                        android:textSize="12.5sp"
-                        android:fontFamily="@font/jetbrains_mono_regular" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/device_change"
-                    android:textColor="@color/color_text_faint"
-                    android:textSize="13sp" />
-
-            </LinearLayout>
-
-            <!-- Volume -->
             <TextView
                 style="@style/SectionLabel"
                 android:layout_marginTop="14dp"
@@ -193,138 +241,12 @@
                     android:focusable="true" />
             </LinearLayout>
 
-            <!-- Sound & Room -->
-            <TextView
-                style="@style/SectionLabel"
-                android:layout_marginTop="14dp"
-                android:text="@string/label_sound_room" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:baselineAligned="false">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="5dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@drawable/bg_card"
-                    android:padding="12dp">
-
-                    <!-- Tapping the name/state opens the SAM level drawer;
-                         the switch itself only flips SAM on/off - same split
-                         we settled on in the mockup, so the level control
-                         stays out of the way until you actually want it. -->
-                    <LinearLayout
-                        android:id="@+id/samOpenTarget"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?android:attr/selectableItemBackground"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        tools:ignore="NestedWeights">
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/toggle_sam_name"
-                                android:textColor="@color/color_text"
-                                android:textSize="13.5sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="2dp"
-                                android:text="@string/toggle_chevron"
-                                android:textColor="@color/color_text_faint"
-                                android:textSize="13sp" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/txtSamState"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/sam_state_on_format"
-                            android:textColor="@color/color_text_faint"
-                            android:textSize="11sp"
-                            android:fontFamily="@font/jetbrains_mono_regular" />
-                    </LinearLayout>
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/samSwitch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        app:trackTint="@color/switch_track_tint"
-                        app:thumbTint="@color/switch_thumb_tint" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="5dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@drawable/bg_card"
-                    android:padding="12dp">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        tools:ignore="NestedWeights">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/toggle_night_name"
-                            android:textColor="@color/color_text"
-                            android:textSize="13.5sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/txtNightState"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/state_off"
-                            android:textColor="@color/color_text_faint"
-                            android:textSize="11sp"
-                            android:fontFamily="@font/jetbrains_mono_regular" />
-                    </LinearLayout>
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/nightSwitch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="false"
-                        app:trackTint="@color/switch_track_tint"
-                        app:thumbTint="@color/switch_thumb_tint" />
-                </LinearLayout>
-            </LinearLayout>
-
             <!-- Mute / Power -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="14dp"
                 android:baselineAligned="false">
 
                 <LinearLayout
@@ -391,35 +313,240 @@
             <!-- Source -->
             <TextView
                 style="@style/SectionLabel"
-                android:layout_marginTop="14dp"
                 android:text="@string/label_source" />
+
+            <LinearLayout
+                android:id="@+id/sourceTrigger"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_card"
+                android:padding="12dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/txtTriggerIcon"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@drawable/shape_source_icon"
+                    android:gravity="center"
+                    android:text="@string/source_icon_default"
+                    android:textColor="@color/color_copper_bright"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/source_active_label"
+                        android:textColor="@color/color_text_faint"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/jetbrains_mono_regular" />
+
+                    <TextView
+                        android:id="@+id/txtTriggerName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dial_no_source"
+                        android:textColor="@color/color_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/source_chevron"
+                    android:textColor="@color/color_text_faint"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:text="@string/footer_note"
+                android:textColor="@color/color_text_faint"
+                android:textSize="11sp"
+                android:fontFamily="@font/jetbrains_mono_regular" />
+
+        </LinearLayout>
+
+        <!-- ============ SOUND TAB ============
+             SAM, Night Mode and Bass/Treble - all fine to reach via a bit of
+             scrolling since this tab is visited far less often than Control. -->
+        <LinearLayout
+            android:id="@+id/viewSound"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Speaker Matching -->
+            <TextView
+                style="@style/SectionLabel"
+                android:layout_marginTop="14dp"
+                android:text="@string/label_speaker_matching" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_card"
+                android:padding="12dp">
 
                 <LinearLayout
-                    android:id="@+id/sourceTrigger"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/toggle_sam_name"
+                        android:textColor="@color/color_text"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtSamState"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/sam_state_on_format"
+                        android:textColor="@color/color_text_faint"
+                        android:textSize="11.5sp"
+                        android:fontFamily="@font/jetbrains_mono_regular" />
+                </LinearLayout>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/samSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:trackTint="@color/switch_track_tint"
+                    app:thumbTint="@color/switch_thumb_tint" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/samSliderCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="14dp">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@drawable/bg_card"
-                    android:padding="12dp"
-                    android:clickable="true"
-                    android:focusable="true">
+                    android:gravity="center_vertical">
 
                     <TextView
-                        android:id="@+id/txtTriggerIcon"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/shape_source_icon"
-                        android:gravity="center"
-                        android:text="@string/source_icon_default"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_level"
+                        android:textColor="@color/color_text"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtSamLevelValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/sam_level_value_format"
                         android:textColor="@color/color_copper_bright"
-                        android:textSize="15sp" />
+                        android:textSize="16sp"
+                        android:fontFamily="@font/jetbrains_mono_semibold" />
+                </LinearLayout>
+
+                <SeekBar
+                    android:id="@+id/seekSamLevel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:max="100"
+                    android:progress="70"
+                    android:progressTint="@color/color_copper_bright"
+                    android:progressBackgroundTint="@color/color_surface_3"
+                    android:thumbTint="@color/color_copper_bright" />
+            </LinearLayout>
+
+            <!-- Room -->
+            <TextView
+                style="@style/SectionLabel"
+                android:text="@string/label_room" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_card"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/toggle_night_name"
+                        android:textColor="@color/color_text"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtNightState"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/state_off"
+                        android:textColor="@color/color_text_faint"
+                        android:textSize="11.5sp"
+                        android:fontFamily="@font/jetbrains_mono_regular" />
+                </LinearLayout>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/nightSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:trackTint="@color/switch_track_tint"
+                    app:thumbTint="@color/switch_thumb_tint" />
+            </LinearLayout>
+
+            <!-- Tone -->
+            <TextView
+                style="@style/SectionLabel"
+                android:text="@string/label_tone" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -430,153 +557,166 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/source_active_label"
-                            android:textColor="@color/color_text_faint"
-                            android:textSize="12sp"
-                            android:fontFamily="@font/jetbrains_mono_regular" />
+                            android:text="@string/label_bass"
+                            android:textColor="@color/color_text"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/txtTriggerName"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/dial_no_source"
-                            android:textColor="@color/color_text"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
+                            android:text="@string/tone_range_hint"
+                            android:textColor="@color/color_text_faint"
+                            android:textSize="11sp"
+                            android:fontFamily="@font/jetbrains_mono_regular" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/txtSourceChevron"
+                        android:id="@+id/txtBassValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/source_chevron"
-                        android:textColor="@color/color_text_faint"
-                        android:textSize="14sp" />
+                        android:text="@string/tone_value_default"
+                        android:textColor="@color/color_copper_bright"
+                        android:textSize="16sp"
+                        android:fontFamily="@font/jetbrains_mono_semibold" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:id="@+id/sourceListWrap"
+                <SeekBar
+                    android:id="@+id/seekBass"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="vertical"
-                    android:background="@drawable/bg_card"
-                    android:visibility="gone">
+                    android:layout_marginTop="10dp"
+                    android:max="36"
+                    android:progress="18"
+                    android:progressTint="@color/color_copper_bright"
+                    android:progressBackgroundTint="@color/color_surface_3"
+                    android:thumbTint="@color/color_copper_bright" />
 
-                    <LinearLayout
-                        android:id="@+id/sourcesContainer"
-                        android:layout_width="match_parent"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:layout_weight="1"
+                        android:text="@string/tone_min_label"
+                        android:textColor="@color/color_text_faint"
+                        android:textSize="10sp"
+                        tools:ignore="SmallSp"
+                        android:fontFamily="@font/jetbrains_mono_regular" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:text="@string/tone_max_label"
+                        android:textColor="@color/color_text_faint"
+                        android:textSize="10sp"
+                        tools:ignore="SmallSp"
+                        android:fontFamily="@font/jetbrains_mono_regular" />
                 </LinearLayout>
             </LinearLayout>
-
-        </LinearLayout>
-    </ScrollView>
-
-    <!-- SAM level drawer - slides in from the end (right in LTR) edge,
-         opened by tapping the SAM card's name/state, not the switch. -->
-    <LinearLayout
-        android:layout_width="300dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="end"
-        android:orientation="vertical"
-        android:background="@color/color_surface"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:paddingTop="28dp"
-        android:paddingBottom="24dp"
-        android:elevation="8dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/sam_drawer_eyebrow"
-            android:textColor="@color/color_copper_bright"
-            android:textSize="11sp"
-            android:letterSpacing="0.14"
-            android:fontFamily="@font/space_grotesk_semibold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/sam_drawer_title"
-            android:textColor="@color/color_text"
-            android:textSize="24sp"
-            android:fontFamily="@font/space_grotesk_semibold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/sam_drawer_desc"
-            android:textColor="@color/color_text_dim"
-            android:textSize="13sp"
-            android:lineSpacingExtra="3dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:orientation="vertical"
-            android:background="@drawable/bg_card"
-            android:padding="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="14dp">
 
-                <TextView
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/sam_drawer_level_label"
-                    android:textColor="@color/color_text_dim"
-                    android:textSize="12.5sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/txtSamLevelValue"
-                    android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_treble"
+                            android:textColor="@color/color_text"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/tone_range_hint"
+                            android:textColor="@color/color_text_faint"
+                            android:textSize="11sp"
+                            android:fontFamily="@font/jetbrains_mono_regular" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/txtTrebleValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tone_value_default"
+                        android:textColor="@color/color_copper_bright"
+                        android:textSize="16sp"
+                        android:fontFamily="@font/jetbrains_mono_semibold" />
+                </LinearLayout>
+
+                <SeekBar
+                    android:id="@+id/seekTreble"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/sam_drawer_level_value_format"
-                    android:textColor="@color/color_copper_bright"
-                    android:textSize="16sp"
-                    android:fontFamily="@font/jetbrains_mono_semibold" />
+                    android:layout_marginTop="10dp"
+                    android:max="36"
+                    android:progress="18"
+                    android:progressTint="@color/color_copper_bright"
+                    android:progressBackgroundTint="@color/color_surface_3"
+                    android:thumbTint="@color/color_copper_bright" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/tone_min_label"
+                        android:textColor="@color/color_text_faint"
+                        android:textSize="10sp"
+                        tools:ignore="SmallSp"
+                        android:fontFamily="@font/jetbrains_mono_regular" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:text="@string/tone_max_label"
+                        android:textColor="@color/color_text_faint"
+                        android:textSize="10sp"
+                        tools:ignore="SmallSp"
+                        android:fontFamily="@font/jetbrains_mono_regular" />
+                </LinearLayout>
             </LinearLayout>
 
-            <SeekBar
-                android:id="@+id/seekSamLevel"
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:max="100"
-                android:progress="70"
-                android:progressTint="@color/color_copper_bright"
-                android:progressBackgroundTint="@color/color_surface_3"
-                android:thumbTint="@color/color_copper_bright" />
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:text="@string/sound_footer_note"
+                android:textColor="@color/color_text_faint"
+                android:textSize="11sp"
+                android:fontFamily="@font/jetbrains_mono_regular" />
+
         </LinearLayout>
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/btnSamDrawerDone"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="center"
-            android:text="@string/sam_drawer_done"
-            android:textColor="@color/color_text"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:background="@drawable/bg_card"
-            android:clickable="true"
-            android:focusable="true" />
-
     </LinearLayout>
-
-</androidx.drawerlayout.widget.DrawerLayout>
+</ScrollView>
