@@ -2,24 +2,28 @@ package com.christian.devialetremote
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.text.InputType
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.widget.ImageViewCompat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -34,14 +38,33 @@ class MainActivity : AppCompatActivity() {
     private lateinit var deviceDot: View
     private lateinit var txtDeviceName: TextView
     private lateinit var txtDeviceSub: TextView
-    private lateinit var txtStatus: TextView
+
+    private lateinit var volumeDial: VolumeDialView
     private lateinit var txtVolumeDb: TextView
-    private lateinit var seekVolume: SeekBar
-    private lateinit var btnMute: Button
-    private lateinit var btnPower: Button
+    private lateinit var txtDialSource: TextView
+    private lateinit var btnVolDown: View
+    private lateinit var btnVolUp: View
+
+    private lateinit var samSwitch: SwitchCompat
+    private lateinit var txtSamState: TextView
+    private lateinit var nightSwitch: SwitchCompat
+    private lateinit var txtNightState: TextView
+
+    private lateinit var btnMute: LinearLayout
+    private lateinit var imgMuteIcon: ImageView
+    private lateinit var txtMuteLabel: TextView
+    private lateinit var btnPower: LinearLayout
+    private lateinit var imgPowerIcon: ImageView
+    private lateinit var txtPowerLabel: TextView
+
+    private lateinit var sourceTrigger: LinearLayout
+    private lateinit var txtTriggerIcon: TextView
+    private lateinit var txtTriggerName: TextView
+    private lateinit var txtSourceChevron: TextView
+    private lateinit var sourceListWrap: LinearLayout
     private lateinit var sourcesContainer: LinearLayout
 
-    private var userIsDraggingSlider = false
+    private var userIsAdjustingVolume = false
     private var isMuted = false
     private var isPoweredOn = true
 
@@ -77,8 +100,8 @@ class MainActivity : AppCompatActivity() {
     private val pickerRefreshHandler = Handler(Looper.getMainLooper())
     private var pickerRefreshRunnable: Runnable? = null
 
-    // Press-and-hold repeat for VOL -/+. Steps are 0.5dB (one slider progress
-    // unit), so a 100ms interval works out to 5dB/sec while held.
+    // Press-and-hold repeat for VOL -/+. Steps are 0.5dB (one progress unit),
+    // so a 100ms interval works out to 5dB/sec while held.
     private val volumeRepeatHandler = Handler(Looper.getMainLooper())
     private var volumeRepeatRunnable: Runnable? = null
     private val volumeRepeatInitialDelayMs = 300L
@@ -87,32 +110,34 @@ class MainActivity : AppCompatActivity() {
     // While the user is actively stepping volume via VOL -/+, the amp's own
     // status broadcasts (~1x/sec, but can land mid-hold) are ignored for a
     // short window after each step - otherwise an in-flight broadcast reporting
-    // the pre-step volume overwrites the slider and makes it jump/jerk while
+    // the pre-step volume overwrites the dial and makes it jump/jerk while
     // held. Window is the repeat interval plus a small buffer so it comfortably
     // covers the gap between repeat steps.
     private val volumeButtonDebounceMs = volumeRepeatIntervalMs + 300L
     private var lastVolumeButtonStepAtMs = 0L
 
-    // Same race, different trigger: releasing the slider sends the new volume,
-    // but an in-flight status broadcast reporting the pre-release volume can
-    // land right after and snap the slider back before the next broadcast
-    // (with the real new value) snaps it forward again - i.e. the jump/jerk
-    // the VOL -/+ debounce above already prevents. It's the same single
-    // setVolumeDb round-trip either way, so reuse that debounce window.
-    private var lastVolumeSliderReleaseAtMs = 0L
+    // Volume steps 0..90 map to dB range -60..-15 in 0.5dB increments. This
+    // range (not the full -60..0 the amp supports) matches setVolumeDb's
+    // default safety clamp in DevialetController - kept identical to the
+    // pre-redesign behavior, only the visuals changed here.
+    private val minDb = -60.0
+    private val maxDb = -15.0
+    private val maxSteps = ((maxDb - minDb) * 2).toInt() // 90
+    private var volumeStep = dbToStep(-20.0)
 
+    private fun stepToDb(step: Int): Double = minDb + (step * 0.5)
+    private fun dbToStep(db: Double): Int = (((db - minDb) * 2).toInt()).coerceIn(0, maxSteps)
 
-    // Slider maps progress 0..90 to dB range -60..-15, in 0.5dB steps
-    private fun progressToDb(progress: Int): Double = (progress * 0.5) - 60.0
-    private fun dbToProgress(db: Double): Int = ((db + 60.0) * 2).toInt().coerceIn(0, 90)
+    // A small rotating set of glyphs for the source list, since the amp's
+    // source list is arbitrary text from its own config, not a fixed enum -
+    // purely decorative, mirrors the varied icons in the mockup.
+    private val sourceIconGlyphs = listOf("◉", "◫", "◍", "◈", "◐", "◇")
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    // Suppresses "Button does not override performClick" - it's a stock Button,
-    // not a custom View subclass, and it already inherits a working
-    // performClick() from View. We do call it explicitly below (on ACTION_UP),
-    // which satisfies the actual accessibility concern; subclassing Button just
-    // to silence this specific lint check isn't worth the complexity.
+    // Suppresses "View does not override performClick" - we call
+    // performClick() explicitly on ACTION_UP below, which satisfies the
+    // actual accessibility concern.
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,11 +150,30 @@ class MainActivity : AppCompatActivity() {
         deviceDot = findViewById(R.id.deviceDot)
         txtDeviceName = findViewById(R.id.txtDeviceName)
         txtDeviceSub = findViewById(R.id.txtDeviceSub)
-        txtStatus = findViewById(R.id.txtStatus)
+
+        volumeDial = findViewById(R.id.volumeDial)
         txtVolumeDb = findViewById(R.id.txtVolumeDb)
-        seekVolume = findViewById(R.id.seekVolume)
+        txtDialSource = findViewById(R.id.txtDialSource)
+        btnVolDown = findViewById(R.id.btnVolDown)
+        btnVolUp = findViewById(R.id.btnVolUp)
+
+        samSwitch = findViewById(R.id.samSwitch)
+        txtSamState = findViewById(R.id.txtSamState)
+        nightSwitch = findViewById(R.id.nightSwitch)
+        txtNightState = findViewById(R.id.txtNightState)
+
         btnMute = findViewById(R.id.btnMute)
+        imgMuteIcon = findViewById(R.id.imgMuteIcon)
+        txtMuteLabel = findViewById(R.id.txtMuteLabel)
         btnPower = findViewById(R.id.btnPower)
+        imgPowerIcon = findViewById(R.id.imgPowerIcon)
+        txtPowerLabel = findViewById(R.id.txtPowerLabel)
+
+        sourceTrigger = findViewById(R.id.sourceTrigger)
+        txtTriggerIcon = findViewById(R.id.txtTriggerIcon)
+        txtTriggerName = findViewById(R.id.txtTriggerName)
+        txtSourceChevron = findViewById(R.id.txtSourceChevron)
+        sourceListWrap = findViewById(R.id.sourceListWrap)
         sourcesContainer = findViewById(R.id.sourcesContainer)
 
         selectedIp = prefs.getString("amp_ip", "") ?: ""
@@ -139,22 +183,7 @@ class MainActivity : AppCompatActivity() {
 
         deviceCard.setOnClickListener { showAmpPickerDialog() }
 
-        seekVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val db = progressToDb(progress)
-                txtVolumeDb.text = getString(R.string.volume_db_format, db)
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) { userIsDraggingSlider = true }
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                userIsDraggingSlider = false
-                lastVolumeSliderReleaseAtMs = SystemClock.elapsedRealtime()
-                val db = progressToDb(seekBar?.progress ?: 0)
-                sendVolume(db)
-            }
-        })
-
-        val btnVolUp = findViewById<Button>(R.id.btnVolUp)
-        val btnVolDown = findViewById<Button>(R.id.btnVolDown)
+        renderVolume()
 
         btnVolUp.setOnTouchListener { v, event ->
             handleVolumeButtonTouch(event, +1)
@@ -183,14 +212,29 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // SAM / Night Mode: UI-only for now. The UDP command bytes for these
+        // haven't been reverse-engineered yet (unlike volume/mute/power/source
+        // below), so these switches just flip local UI state and don't talk
+        // to the amp at all - no risk of sending a command that does the
+        // wrong thing. See the TODO stubs in DevialetController for where
+        // this plugs in once the bytes are known.
+        samSwitch.setOnCheckedChangeListener { _, isChecked ->
+            txtSamState.text = getString(if (isChecked) R.string.state_on else R.string.state_off)
+        }
+        nightSwitch.setOnCheckedChangeListener { _, isChecked ->
+            txtNightState.text = getString(if (isChecked) R.string.state_on else R.string.state_off)
+        }
+
+        sourceTrigger.setOnClickListener { toggleSourceList() }
+
         updateMuteButton()
         updatePowerButton()
 
         // Listens for every amp's status broadcasts (not just the selected
         // one - see applyStatus) to show live volume/mute/power/source, to
-        // populate the source buttons, and to build the amplifier picker
-        // list. Purely informational/discovery - control buttons above work
-        // even if this never receives anything.
+        // populate the source list, and to build the amplifier picker list.
+        // Purely informational/discovery - control buttons above work even
+        // if this never receives anything.
         statusListener = DevialetStatusListener { status, senderIp ->
             runOnUiThread { applyStatus(status, senderIp) }
         }
@@ -210,6 +254,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun renderVolume() {
+        val db = stepToDb(volumeStep)
+        txtVolumeDb.text = getString(R.string.volume_db_format, db)
+        volumeDial.setProgress(volumeStep / maxSteps.toFloat())
+    }
+
     /**
      * Handles VOL -/+ touch events: a quick tap does a single 0.5dB step (fires
      * on ACTION_DOWN so it's instant), and holding the button down auto-repeats
@@ -226,6 +276,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startVolumeRepeat(direction: Int) {
         stopVolumeRepeat()
+        userIsAdjustingVolume = true
         stepVolume(direction) // immediate response to the initial press
         val runnable = object : Runnable {
             override fun run() {
@@ -240,20 +291,38 @@ class MainActivity : AppCompatActivity() {
     private fun stopVolumeRepeat() {
         volumeRepeatRunnable?.let { volumeRepeatHandler.removeCallbacks(it) }
         volumeRepeatRunnable = null
+        userIsAdjustingVolume = false
     }
 
     private fun stepVolume(direction: Int) {
         lastVolumeButtonStepAtMs = SystemClock.elapsedRealtime()
-        seekVolume.progress = (seekVolume.progress + direction).coerceIn(0, seekVolume.max)
-        sendVolume(progressToDb(seekVolume.progress))
+        volumeStep = (volumeStep + direction).coerceIn(0, maxSteps)
+        renderVolume()
+        sendVolume(stepToDb(volumeStep))
     }
 
     private fun updateMuteButton() {
-        btnMute.setText(if (isMuted) R.string.btn_unmute else R.string.btn_mute)
+        txtMuteLabel.text = getString(R.string.btn_mute)
+        btnMute.setBackgroundResource(if (isMuted) R.drawable.bg_card_active else R.drawable.bg_card)
+        val tint = if (isMuted) {
+            ContextCompat.getColor(this, R.color.color_copper_bright)
+        } else {
+            ContextCompat.getColor(this, R.color.color_text)
+        }
+        ImageViewCompat.setImageTintList(imgMuteIcon, ColorStateList.valueOf(tint))
+        txtMuteLabel.setTextColor(tint)
     }
 
     private fun updatePowerButton() {
-        btnPower.setText(if (isPoweredOn) R.string.btn_power_off else R.string.btn_power_on)
+        txtPowerLabel.text = getString(if (isPoweredOn) R.string.btn_power_off else R.string.btn_power_on)
+        btnPower.setBackgroundResource(if (isPoweredOn) R.drawable.bg_card else R.drawable.bg_card_danger_active)
+        val tint = if (isPoweredOn) {
+            ContextCompat.getColor(this, R.color.color_text)
+        } else {
+            ContextCompat.getColor(this, R.color.color_danger_soft)
+        }
+        ImageViewCompat.setImageTintList(imgPowerIcon, ColorStateList.valueOf(tint))
+        txtPowerLabel.setTextColor(tint)
     }
 
     // ---- Amplifier discovery & selection ----
@@ -388,6 +457,14 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // ---- Source dropdown ----
+
+    private fun toggleSourceList(forceClose: Boolean = false) {
+        val show = !forceClose && sourceListWrap.visibility != View.VISIBLE
+        sourceListWrap.visibility = if (show) View.VISIBLE else View.GONE
+        txtSourceChevron.animate().rotation(if (show) 180f else 0f).setDuration(150).start()
+    }
+
     // ---- Status broadcasts ----
 
     private fun applyStatus(status: DevialetStatus, senderIp: String) {
@@ -399,15 +476,6 @@ class MainActivity : AppCompatActivity() {
 
         if (selectedIp.isBlank() || senderIp != selectedIp) return // ignore other amps' live status
 
-        txtStatus.text = getString(
-            R.string.status_format,
-            status.deviceName,
-            senderIp,
-            getString(if (status.powerOn) R.string.power_on else R.string.power_off),
-            status.muted,
-            status.currentSourceName
-        )
-
         isMuted = status.muted
         isPoweredOn = status.powerOn
         updateMuteButton()
@@ -415,41 +483,106 @@ class MainActivity : AppCompatActivity() {
 
         val recentlyPressedVolumeButton =
             SystemClock.elapsedRealtime() - lastVolumeButtonStepAtMs < volumeButtonDebounceMs
-        val recentlyReleasedSlider =
-            SystemClock.elapsedRealtime() - lastVolumeSliderReleaseAtMs < volumeButtonDebounceMs
-        if (!userIsDraggingSlider && !recentlyPressedVolumeButton && !recentlyReleasedSlider) {
-            seekVolume.progress = dbToProgress(status.volumeDb)
-            txtVolumeDb.text = getString(R.string.volume_db_format, status.volumeDb)
+        if (!userIsAdjustingVolume && !recentlyPressedVolumeButton) {
+            volumeStep = dbToStep(status.volumeDb)
+            renderVolume()
         }
 
-        rebuildSourceButtons(status)
+        txtTriggerName.text = status.currentSourceName
+        txtDialSource.text = status.currentSourceName.uppercase()
+        val activeIndex = status.enabledSources.indexOfFirst { it.isSelected }
+        if (activeIndex >= 0) {
+            txtTriggerIcon.text = sourceIconGlyphs[activeIndex % sourceIconGlyphs.size]
+        }
+
+        rebuildSourceList(status)
     }
 
-    private fun rebuildSourceButtons(status: DevialetStatus) {
+    private fun rebuildSourceList(status: DevialetStatus) {
         // Tag includes both name AND selection state, so a source change
         // (not just the set of sources changing) triggers a rebuild and the
-        // "(ACTIVE)" label stays in sync. Comparing names alone meant this
-        // always short-circuited after the first draw, since the list of
-        // available sources doesn't change when you just switch inputs.
+        // active row stays in sync. Comparing names alone meant this always
+        // short-circuited after the first draw, since the list of available
+        // sources doesn't change when you just switch inputs.
         val tagKey = status.enabledSources.map { it.name to it.isSelected }
         if (sourcesContainer.tag == tagKey) return // avoid rebuilding every second
         sourcesContainer.removeAllViews()
         sourcesContainer.tag = tagKey
-        for (source in status.enabledSources) {
-            val button = Button(this).apply {
-                text = if (source.isSelected) {
-                    getString(R.string.source_active_format, source.name)
-                } else {
-                    source.name
-                }
-                setOnClickListener {
-                    requireIp {
-                        network.submit { runCatching { controller.selectSource(source.index) } }
-                    }
-                }
+
+        val sources = status.enabledSources
+        sources.forEachIndexed { i, source ->
+            sourcesContainer.addView(buildSourceRow(source, sourceIconGlyphs[i % sourceIconGlyphs.size]))
+            if (i != sources.lastIndex) {
+                sourcesContainer.addView(View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
+                    )
+                    setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.color_divider))
+                })
             }
-            sourcesContainer.addView(button)
         }
+    }
+
+    private fun buildSourceRow(source: DevialetSource, glyph: String): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(13), dp(16), dp(13))
+            isClickable = true
+            isFocusable = true
+            setBackgroundResource(R.drawable.bg_source_row)
+        }
+
+        val icon = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(12) }
+            gravity = Gravity.CENTER
+            text = glyph
+            textSize = 13f
+            setBackgroundResource(if (source.isSelected) R.drawable.shape_source_icon_selected else R.drawable.shape_source_icon)
+            setTextColor(
+                ContextCompat.getColor(
+                    this@MainActivity,
+                    if (source.isSelected) R.color.color_copper_bright else R.color.color_text_dim
+                )
+            )
+        }
+
+        val name = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            text = source.name
+            textSize = 14.5f
+            setTextColor(
+                ContextCompat.getColor(
+                    this@MainActivity,
+                    if (source.isSelected) R.color.color_copper_bright else R.color.color_text
+                )
+            )
+        }
+
+        val check = TextView(this).apply {
+            text = "✓"
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_copper_bright))
+            visibility = if (source.isSelected) View.VISIBLE else View.INVISIBLE
+        }
+
+        row.addView(icon)
+        row.addView(name)
+        row.addView(check)
+
+        row.setOnClickListener {
+            // Snappy immediate feedback, same as the mockup - the real
+            // confirmation still comes from the amp's next status broadcast.
+            txtTriggerName.text = source.name
+            txtDialSource.text = source.name.uppercase()
+            txtTriggerIcon.text = glyph
+            toggleSourceList(forceClose = true)
+            requireIp {
+                network.submit { runCatching { controller.selectSource(source.index) } }
+            }
+        }
+
+        return row
     }
 
     override fun onResume() {

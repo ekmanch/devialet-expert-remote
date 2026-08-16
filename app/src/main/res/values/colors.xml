@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Backgrounds -->
+    <color name="color_page">#08080A</color>
+    <color name="color_bg">#0E0E10</color>
+    <color name="color_bg_2">#101012</color>
+    <color name="color_surface">#1A1A1D</color>
+    <color name="color_surface_2">#222225</color>
+    <color name="color_surface_3">#2A2A2E</color>
+
+    <!-- Copper accent (pulled from the amp's heatsink) -->
+    <color name="color_copper">#C17F4E</color>
+    <color name="color_copper_bright">#E3A06A</color>
+    <color name="color_copper_dim">#8A5C39</color>
+
+    <!-- Text -->
+    <color name="color_text">#F2F0EC</color>
+    <color name="color_text_dim">#9A9A9F</color>
+    <color name="color_text_faint">#5C5C60</color>
+
+    <!-- Structure -->
+    <color name="color_divider">#12FFFFFF</color>
+    <color name="color_danger">#B5544A</color>
+    <color name="color_danger_soft">#D98C82</color>
+
+    <!-- Status dots -->
+    <color name="color_dot_connected">#E3A06A</color>
+    <color name="color_dot_disconnected">#5C5C60</color>
+
+    <!-- Switch thumb -->
+    <color name="color_switch_thumb_off">#E8E6E1</color>
+
+    <!-- "Active" tinted state for action buttons (mute engaged, etc.) -->
+    <color name="color_copper_active_bg">#24C17F4E</color>
+    <color name="color_copper_active_border">#66C17F4E</color>
+    <color name="color_danger_active_bg">#24B5544A</color>
+    <color name="color_danger_active_border">#66B5544A</color>
+</resources>

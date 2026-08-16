@@ -150,4 +150,24 @@ class DevialetController(@Volatile var deviceIp: String) {
         // startup volume the amp would otherwise pick for this input.
         setVolumeDb(SOURCE_SWITCH_VOLUME_DB)
     }
+
+    // ---- Not yet wired: SAM / Night Mode ----
+    //
+    // The UI has switches for these (MainActivity's samSwitch/nightSwitch),
+    // but on purpose they only flip local UI state right now and never call
+    // down into here - the UDP command bytes for SAM and Night Mode haven't
+    // been reverse-engineered yet (unlike power/mute/volume/source above,
+    // which came from gnulabis/devimote and jprouty/devialet_expert). Sending
+    // guessed bytes risks the amp doing something unintended, so nothing goes
+    // out over the wire for these two until the real values are confirmed
+    // (packet-sniffing the official app while toggling each setting is the
+    // most direct way to get them).
+    //
+    // Once known, wiring these up is the same shape as setMute/setPower
+    // above - a single sendTwice(byte6, byte7) call - and MainActivity's two
+    // switch listeners just need a `network.submit { ... }` call added,
+    // exactly like btnMute's and btnPower's click listeners already do.
+    //
+    // fun setSam(on: Boolean) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */)
+    // fun setNightMode(on: Boolean) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */)
 }
