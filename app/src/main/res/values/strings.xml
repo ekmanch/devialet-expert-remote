@@ -6,8 +6,8 @@
     <string name="title_app">Expert Pro Remote</string>
 
     <!-- Device card -->
-    <string name="device_none_selected">No amplifier selected</string>
-    <string name="device_tap_to_choose">Tap to choose one</string>
+    <string name="device_none_selected">No Amplifier</string>
+    <string name="device_tap_to_choose">Tap to connect</string>
     <string name="device_sub_format">%1$s · %2$s</string>
     <string name="device_connected">Connected</string>
     <string name="device_not_responding">Not responding</string>
@@ -19,6 +19,8 @@
     <string name="volume_db_format">%1$.1f</string>
     <string name="dial_unit_db">dB</string>
     <string name="dial_no_source">—</string>
+    <string name="no_source_label">No source</string>
+    <string name="source_icon_none">–</string>
     <string name="btn_vol_down">−</string>
     <string name="btn_vol_up">+</string>
 
@@ -31,7 +33,9 @@
     <string name="toggle_sam_name">SAM</string>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>
+    <string name="state_off_disconnected">Off · no amplifier connected</string>
     <string name="sam_state_on_format">On · %1$d%%</string>
+    <string name="sam_state_off_format">Off · No Speaker Matching</string>
     <string name="label_level">Level</string>
     <string name="sam_level_value_format">%1$d%%</string>
 
@@ -49,6 +53,9 @@
     <string name="tone_value_format">%1$s%2$d dB</string>
     <string name="tone_value_default">0 dB</string>
     <string name="sound_footer_note">Bass and treble apply to the active source</string>
+    <string name="sound_empty_icon">♫</string>
+    <string name="sound_empty_title">No amplifier connected</string>
+    <string name="sound_empty_sub">Sound settings will appear here once you connect to an amplifier.</string>
 
     <!-- Mute / power -->
     <string name="btn_mute">Mute</string>
@@ -63,19 +70,29 @@
     <string name="source_icon_default">◉</string>
     <string name="source_chevron">›</string>
     <string name="source_sheet_title">Select source</string>
+    <string name="source_empty_title">No sources available</string>
+    <string name="source_empty_sub">Connect to an amplifier to see its sources.</string>
+    <string name="source_active_check">✓</string>
 
-    <!-- Amplifier picker dialog -->
+    <!-- Amplifier picker sheet -->
     <string name="dialog_choose_amp_title">Choose Amplifier</string>
+    <string name="amp_sheet_subtitle">Amplifiers found on your network</string>
     <string name="dialog_searching">Searching for amplifiers on your network…</string>
     <string name="dialog_enter_ip_manually">Enter IP Manually</string>
-    <string name="dialog_cancel">Cancel</string>
-    <string name="dialog_ok">OK</string>
-    <string name="amp_row_format">%1$s\n%2$s</string>
-    <string name="amp_row_selected_format">%1$s ✓\n%2$s</string>
-    <string name="hint_amp_ip">Amp IP address, e.g. 192.168.1.50</string>
+    <string name="amp_none_name">None</string>
+    <string name="amp_none_sub">Don\'t connect to any amplifier</string>
+    <string name="amp_manual_icon">⌨</string>
+    <string name="amp_manual_title">Enter IP Address</string>
+    <string name="amp_manual_ip_placeholder">192.168.0.1</string>
+    <string name="amp_manual_ip_hint">Find this in your router\'s device list or the Devialet app.</string>
+    <string name="amp_back_chevron">‹</string>
+    <string name="amp_back_description">Back to amplifier list</string>
+    <string name="btn_connect">Connect</string>
 
     <!-- Toasts / status -->
     <string name="toast_select_amp_first">Choose an amplifier first</string>
     <string name="toast_saved_talking">Saved. Talking to %1$s</string>
+    <string name="toast_disconnected">Disconnected. No amplifier selected.</string>
     <string name="footer_note">Tap the device card to switch amplifiers on your network</string>
+    <string name="footer_note_disconnected">Tap the device card to connect to an amplifier</string>
 </resources>

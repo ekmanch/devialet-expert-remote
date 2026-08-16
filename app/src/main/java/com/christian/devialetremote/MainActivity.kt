@@ -7,19 +7,17 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.text.InputType
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
@@ -48,10 +46,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewSound: LinearLayout
 
     private lateinit var volumeDial: VolumeDialView
+    private lateinit var dialWrap: LinearLayout
     private lateinit var txtVolumeDb: TextView
+    private lateinit var txtDialUnit: TextView
     private lateinit var txtDialSource: TextView
     private lateinit var btnVolDown: View
     private lateinit var btnVolUp: View
+    private lateinit var actionRow: LinearLayout
+    private lateinit var txtControlFooterNote: TextView
 
     private lateinit var samSwitch: SwitchCompat
     private lateinit var txtSamState: TextView
@@ -66,6 +68,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var txtBassValue: TextView
     private lateinit var seekTreble: SeekBar
     private lateinit var txtTrebleValue: TextView
+
+    private lateinit var soundControls: LinearLayout
+    private lateinit var soundEmptyState: LinearLayout
+    private lateinit var txtSoundFooterNote: TextView
 
     private lateinit var btnMute: LinearLayout
     private lateinit var imgMuteIcon: ImageView
@@ -85,6 +91,12 @@ class MainActivity : AppCompatActivity() {
     private var sourceSheetDialog: BottomSheetDialog? = null
     private var sourcesContainer: LinearLayout? = null
 
+    // The amplifier picker's own Dialog - null whenever the sheet is closed.
+    // Unlike the source sheet, its rows are always fully rebuilt from
+    // scratch on each render() (see showAmpSheet), so there's no equivalent
+    // of sourcesContainer to cache here.
+    private var ampSheetDialog: BottomSheetDialog? = null
+
     // Most recent status broadcast for the selected amp, kept so the source
     // sheet can be populated immediately on open rather than waiting for the
     // next ~1/sec broadcast to arrive.
@@ -94,6 +106,20 @@ class MainActivity : AppCompatActivity() {
     private var isMuted = false
     private var isPoweredOn = true
 
+    // SAM on/off and Night Mode on/off, tracked independently of the
+    // switches themselves: while no amplifier is selected both switches are
+    // forced visually off (see updateConnectionState), which would otherwise
+    // clobber the user's actual preference. These are what gets restored to
+    // the switches once an amplifier is selected again.
+    private var samOn = true
+    private var nightOn = false
+
+    // Set while updateConnectionState() is programmatically flipping
+    // samSwitch/nightSwitch, so their OnCheckedChangeListener can tell a
+    // real user toggle apart from one it triggered itself and skip updating
+    // samOn/nightOn for the latter.
+    private var suppressToggleCallbacks = false
+
     // The amp currently selected for control, and everything this app has
     // heard broadcasting on the LAN recently (keyed by IP) - the latter is
     // what populates the "Choose Amplifier" picker so nobody has to type an
@@ -102,6 +128,20 @@ class MainActivity : AppCompatActivity() {
     private var selectedIp: String = ""
     private var selectedName: String = ""
     private val discoveredAmps = LinkedHashMap<String, DiscoveredAmp>()
+
+    // True once an amplifier has actually been chosen (including explicitly
+    // choosing "None" beforehand, which clears selectedIp again) - drives
+    // whether the dial, mute/power, source trigger and Sound tab controls
+    // are interactive or shown in their dimmed "nothing to control" state.
+    // Deliberately independent of isAmpRecentlyHeard: a momentary missed
+    // broadcast shouldn't gray out the whole UI, only "None" should.
+    private val hasSelectedAmp: Boolean
+        get() = selectedIp.isNotBlank()
+
+    // Opacity applied to dialWrap/actionRow/soundControls (as a whole, not
+    // per-child) when hasSelectedAmp is false - matches the mockup's
+    // .disabled-overlay{opacity:0.4}.
+    private val disabledAlpha = 0.4f
 
     // An amp not heard from in this long is treated as gone (dropped from the
     // picker list, device card flips to "Not responding"). Broadcasts land
@@ -211,10 +251,14 @@ class MainActivity : AppCompatActivity() {
         viewSound = findViewById(R.id.viewSound)
 
         volumeDial = findViewById(R.id.volumeDial)
+        dialWrap = findViewById(R.id.dialWrap)
         txtVolumeDb = findViewById(R.id.txtVolumeDb)
+        txtDialUnit = findViewById(R.id.txtDialUnit)
         txtDialSource = findViewById(R.id.txtDialSource)
         btnVolDown = findViewById(R.id.btnVolDown)
         btnVolUp = findViewById(R.id.btnVolUp)
+        actionRow = findViewById(R.id.actionRow)
+        txtControlFooterNote = findViewById(R.id.txtControlFooterNote)
 
         samSwitch = findViewById(R.id.samSwitch)
         txtSamState = findViewById(R.id.txtSamState)
@@ -229,6 +273,10 @@ class MainActivity : AppCompatActivity() {
         txtBassValue = findViewById(R.id.txtBassValue)
         seekTreble = findViewById(R.id.seekTreble)
         txtTrebleValue = findViewById(R.id.txtTrebleValue)
+
+        soundControls = findViewById(R.id.soundControls)
+        soundEmptyState = findViewById(R.id.soundEmptyState)
+        txtSoundFooterNote = findViewById(R.id.txtSoundFooterNote)
 
         btnMute = findViewById(R.id.btnMute)
         imgMuteIcon = findViewById(R.id.imgMuteIcon)
@@ -246,7 +294,7 @@ class MainActivity : AppCompatActivity() {
         controller = DevialetController(selectedIp)
         updateDeviceCard()
 
-        deviceCard.setOnClickListener { showAmpPickerDialog() }
+        deviceCard.setOnClickListener { showAmpSheet() }
 
         segControl.setOnClickListener { showTab(Tab.CONTROL) }
         segSound.setOnClickListener { showTab(Tab.SOUND) }
@@ -254,11 +302,13 @@ class MainActivity : AppCompatActivity() {
         renderVolume()
 
         btnVolUp.setOnTouchListener { v, event ->
+            if (!v.isEnabled) return@setOnTouchListener false
             handleVolumeButtonTouch(event, +1)
             if (event.actionMasked == MotionEvent.ACTION_UP) v.performClick()
             true
         }
         btnVolDown.setOnTouchListener { v, event ->
+            if (!v.isEnabled) return@setOnTouchListener false
             handleVolumeButtonTouch(event, -1)
             if (event.actionMasked == MotionEvent.ACTION_UP) v.performClick()
             true
@@ -302,10 +352,14 @@ class MainActivity : AppCompatActivity() {
         // setMute/setPower above in every case, just a `network.submit { ... }`
         // call added to the listener already sitting here.
         samSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (suppressToggleCallbacks) return@setOnCheckedChangeListener
+            samOn = isChecked
             updateSamStateLabel(isChecked)
             updateSamSliderEnabled(isChecked)
         }
         nightSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (suppressToggleCallbacks) return@setOnCheckedChangeListener
+            nightOn = isChecked
             txtNightState.text = getString(if (isChecked) R.string.state_on else R.string.state_off)
         }
 
@@ -347,8 +401,7 @@ class MainActivity : AppCompatActivity() {
 
         updateMuteButton()
         updatePowerButton()
-        updateSamStateLabel(samSwitch.isChecked)
-        updateSamSliderEnabled(samSwitch.isChecked)
+        updateConnectionState()
 
         // Listens for every amp's status broadcasts (not just the selected
         // one - see applyStatus) to show live volume/mute/power/source, to
@@ -393,6 +446,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderVolume() {
+        if (!hasSelectedAmp) {
+            txtVolumeDb.text = getString(R.string.dial_no_source)
+            volumeDial.setProgress(0f)
+            return
+        }
         val db = stepToDb(volumeStep)
         txtVolumeDb.text = getString(R.string.volume_db_format, db)
         volumeDial.setProgress(volumeStep / maxSteps.toFloat())
@@ -443,13 +501,13 @@ class MainActivity : AppCompatActivity() {
         txtSamState.text = if (isOn) {
             getString(R.string.sam_state_on_format, samLevel)
         } else {
-            getString(R.string.state_off)
+            getString(R.string.sam_state_off_format)
         }
     }
 
     private fun updateSamSliderEnabled(isOn: Boolean) {
         seekSamLevel.isEnabled = isOn
-        samSliderCard.alpha = if (isOn) 1f else 0.4f
+        samSliderCard.alpha = if (isOn) 1f else disabledAlpha
     }
 
     private fun renderToneValue(target: TextView, db: Int) {
@@ -481,6 +539,87 @@ class MainActivity : AppCompatActivity() {
         txtPowerLabel.setTextColor(tint)
     }
 
+    // ---- Connection state (no amplifier selected vs. one selected) ----
+
+    /**
+     * Dims [view] to [disabledAlpha] (or restores full opacity) and disables
+     * every clickable/draggable descendant, matching the mockup's
+     * .disabled-overlay{opacity:0.4; pointer-events:none}. Alpha is applied
+     * only to [view] itself - Android composites a parent's alpha across its
+     * whole subtree automatically, so setting it on every descendant too
+     * would just multiply the dimming. isEnabled, on the other hand, does
+     * NOT propagate to descendants on its own, so that part does need to be
+     * recursive to actually block touches on things like SeekBars and
+     * switches nested inside.
+     */
+    private fun setGroupEnabled(view: View, enabled: Boolean) {
+        view.alpha = if (enabled) 1f else disabledAlpha
+        setDescendantsEnabled(view, enabled)
+    }
+
+    private fun setDescendantsEnabled(view: View, enabled: Boolean) {
+        view.isEnabled = enabled
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                setDescendantsEnabled(view.getChildAt(i), enabled)
+            }
+        }
+    }
+
+    /**
+     * The single place that reflects hasSelectedAmp across the UI: the
+     * volume dial + mute/power (dialWrap/actionRow), the whole Sound tab
+     * (soundControls, swapped for soundEmptyState), and SAM/Night Mode's
+     * switches, which get forced off with a "no amplifier" label rather than
+     * showing whatever was last toggled. samOn/nightOn hold the real
+     * preference underneath so it's restored once an amplifier is selected
+     * again - see the fields' own comments.
+     */
+    private fun updateConnectionState() {
+        val connected = hasSelectedAmp
+
+        setGroupEnabled(dialWrap, connected)
+        setGroupEnabled(actionRow, connected)
+        renderVolume()
+        txtDialUnit.visibility = if (connected) View.VISIBLE else View.INVISIBLE
+
+        // The source trigger stays clickable either way - opening it while
+        // disconnected shows its own empty state (see showSourceSheet) -
+        // only its opacity reflects the connection state.
+        sourceTrigger.alpha = if (connected) 1f else disabledAlpha
+        if (!connected) {
+            txtDialSource.text = getString(R.string.no_source_label)
+            txtTriggerName.text = getString(R.string.no_source_label)
+            txtTriggerIcon.text = getString(R.string.source_icon_none)
+        }
+
+        txtControlFooterNote.text = getString(
+            if (connected) R.string.footer_note else R.string.footer_note_disconnected
+        )
+
+        setGroupEnabled(soundControls, connected)
+        soundEmptyState.visibility = if (connected) View.GONE else View.VISIBLE
+        txtSoundFooterNote.visibility = if (connected) View.VISIBLE else View.GONE
+
+        suppressToggleCallbacks = true
+        samSwitch.isChecked = connected && samOn
+        nightSwitch.isChecked = connected && nightOn
+        suppressToggleCallbacks = false
+
+        if (connected) {
+            // Layered on top of the broad soundControls enable above: SAM
+            // being off should still dim its level slider even though an
+            // amp is selected, same as before this redesign.
+            updateSamStateLabel(samOn)
+            updateSamSliderEnabled(samOn)
+            txtNightState.text = getString(if (nightOn) R.string.state_on else R.string.state_off)
+        } else {
+            txtSamState.text = getString(R.string.state_off_disconnected)
+            samSliderCard.alpha = 1f // avoid compounding with soundControls' own dim above
+            txtNightState.text = getString(R.string.state_off_disconnected)
+        }
+    }
+
     // ---- Amplifier discovery & selection ----
 
     private fun isAmpRecentlyHeard(ip: String): Boolean {
@@ -492,7 +631,7 @@ class MainActivity : AppCompatActivity() {
         if (selectedIp.isBlank()) {
             txtDeviceName.text = getString(R.string.device_none_selected)
             txtDeviceSub.text = getString(R.string.device_tap_to_choose)
-            deviceDot.setBackgroundResource(R.drawable.dot_disconnected)
+            deviceDot.setBackgroundResource(R.drawable.dot_none)
             return
         }
         txtDeviceName.text = selectedName.ifBlank { selectedIp }
@@ -514,29 +653,81 @@ class MainActivity : AppCompatActivity() {
         }
         controller.deviceIp = selectedIp
         updateDeviceCard()
+        updateConnectionState()
         Toast.makeText(this, getString(R.string.toast_saved_talking, selectedIp), Toast.LENGTH_SHORT).show()
     }
 
     /**
-     * Shows every amp heard from in the last [ampStaleTimeoutMs], refreshing
-     * live while open, plus a manual-IP fallback for the rare case discovery
-     * doesn't work (different subnet/VLAN, amp hasn't broadcast yet, etc.).
+     * Explicitly choosing "None" in the amp sheet - distinct from simply
+     * never having chosen an amp yet, but ends up at the same selectedIp =
+     * "" state either way (see hasSelectedAmp).
      */
-    private fun showAmpPickerDialog() {
-        val listContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+    private fun clearAmpSelection() {
+        selectedIp = ""
+        selectedName = ""
+        prefs.edit {
+            putString("amp_ip", "")
+            putString("amp_name", "")
         }
-        val scroll = ScrollView(this).apply { addView(listContainer) }
+        controller.deviceIp = ""
+        updateDeviceCard()
+        updateConnectionState()
+        Toast.makeText(this, R.string.toast_disconnected, Toast.LENGTH_SHORT).show()
+    }
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.dialog_choose_amp_title)
-            .setView(scroll)
-            .setNeutralButton(R.string.dialog_enter_ip_manually) { _, _ -> showManualIpDialog() }
-            .setNegativeButton(R.string.dialog_cancel, null)
-            .create()
+    /**
+     * Shows a BottomSheetDialog (same pattern as the source picker) listing
+     * "None" (to explicitly disconnect), every amp heard from in the last
+     * [ampStaleTimeoutMs] - refreshed live while open - and a manual-IP
+     * fallback that swaps in a second view within the same sheet rather than
+     * opening a separate dialog, for the rare case discovery doesn't work
+     * (different subnet/VLAN, amp hasn't broadcast yet, etc.).
+     */
+    @SuppressLint("InflateParams")
+    private fun showAmpSheet() {
+        val view = layoutInflater.inflate(R.layout.sheet_amp_picker, null)
+
+        val listView = view.findViewById<LinearLayout>(R.id.ampListView)
+        val manualView = view.findViewById<LinearLayout>(R.id.ampManualView)
+        val listContainer = view.findViewById<LinearLayout>(R.id.ampListContainer)
+        val noneRow = view.findViewById<LinearLayout>(R.id.ampNoneRow)
+        val noneDot = view.findViewById<View>(R.id.ampNoneDot)
+        val noneName = view.findViewById<TextView>(R.id.ampNoneName)
+        val noneCheck = view.findViewById<TextView>(R.id.ampNoneCheck)
+        val manualEntryRow = view.findViewById<LinearLayout>(R.id.ampManualEntryRow)
+        val backBtn = view.findViewById<View>(R.id.btnAmpBack)
+        val ipInput = view.findViewById<EditText>(R.id.inputManualIp)
+        val connectBtn = view.findViewById<View>(R.id.btnConnectIp)
+
+        val dialog = BottomSheetDialog(this, R.style.ThemeOverlay_DevialetRemote_BottomSheet)
+        dialog.setContentView(view)
+
+        fun showListView() {
+            manualView.visibility = View.GONE
+            listView.visibility = View.VISIBLE
+        }
+
+        fun showManualView() {
+            listView.visibility = View.GONE
+            manualView.visibility = View.VISIBLE
+            ipInput.setText(selectedIp)
+            ipInput.requestFocus()
+            // Small delay so the newly-visible field has finished laying out
+            // before we ask the system to show the keyboard on it.
+            ipInput.postDelayed({ showKeyboard(ipInput) }, 250L)
+        }
 
         fun render() {
+            val noneSelected = !hasSelectedAmp
+            noneDot.setBackgroundResource(if (noneSelected) R.drawable.dot_none_selected else R.drawable.dot_none)
+            noneName.setTextColor(
+                ContextCompat.getColor(
+                    this,
+                    if (noneSelected) R.color.color_copper_bright else R.color.color_text_dim
+                )
+            )
+            noneCheck.visibility = if (noneSelected) View.VISIBLE else View.INVISIBLE
+
             listContainer.removeAllViews()
             val fresh = discoveredAmps.values
                 .filter { isAmpRecentlyHeard(it.ipAddress) }
@@ -545,7 +736,9 @@ class MainActivity : AppCompatActivity() {
             if (fresh.isEmpty()) {
                 listContainer.addView(TextView(this).apply {
                     text = getString(R.string.dialog_searching)
-                    setPadding(dp(12), dp(20), dp(12), dp(20))
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_text_faint))
+                    textSize = 12.5f
+                    setPadding(dp(10), dp(16), dp(10), dp(16))
                 })
             } else {
                 for (amp in fresh) {
@@ -554,6 +747,28 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        noneRow.setOnClickListener {
+            clearAmpSelection()
+            dialog.dismiss()
+        }
+        manualEntryRow.setOnClickListener { showManualView() }
+        backBtn.setOnClickListener { showListView() }
+        connectBtn.setOnClickListener {
+            val ip = ipInput.text.toString().trim()
+            if (ip.isNotEmpty()) {
+                selectAmp(ip, "")
+                dialog.dismiss()
+            }
+        }
+
+        ampSheetDialog = dialog
+        dialog.setOnDismissListener {
+            ampSheetDialog = null
+            pickerRefreshRunnable?.let { pickerRefreshHandler.removeCallbacks(it) }
+            pickerRefreshRunnable = null
+        }
+
+        showListView()
         render()
         val refresh = object : Runnable {
             override fun run() {
@@ -564,53 +779,70 @@ class MainActivity : AppCompatActivity() {
         pickerRefreshRunnable = refresh
         pickerRefreshHandler.postDelayed(refresh, 1_000L)
 
-        dialog.setOnDismissListener {
-            pickerRefreshRunnable?.let { pickerRefreshHandler.removeCallbacks(it) }
-            pickerRefreshRunnable = null
-        }
-
         dialog.show()
     }
 
-    private fun buildAmpRow(amp: DiscoveredAmp, dialog: AlertDialog): View {
-        return TextView(this).apply {
-            text = if (amp.ipAddress == selectedIp) {
-                getString(R.string.amp_row_selected_format, amp.deviceName, amp.ipAddress)
-            } else {
-                getString(R.string.amp_row_format, amp.deviceName, amp.ipAddress)
-            }
-            textSize = 16f
-            setPadding(dp(12), dp(14), dp(12), dp(14))
+    private fun buildAmpRow(amp: DiscoveredAmp, dialog: BottomSheetDialog): View {
+        val selected = amp.ipAddress == selectedIp
+
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(13), dp(10), dp(13))
             isClickable = true
             isFocusable = true
-            setBackgroundResource(android.R.drawable.list_selector_background)
-            setOnClickListener {
-                selectAmp(amp.ipAddress, amp.deviceName)
-                dialog.dismiss()
-            }
+            setBackgroundResource(R.drawable.bg_source_row)
         }
+
+        val dot = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginEnd = dp(12) }
+            setBackgroundResource(if (selected) R.drawable.dot_connected else R.drawable.dot_disconnected)
+        }
+
+        val info = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            orientation = LinearLayout.VERTICAL
+        }
+        val name = TextView(this).apply {
+            text = amp.deviceName.ifBlank { amp.ipAddress }
+            textSize = 15f
+            setTextColor(
+                ContextCompat.getColor(
+                    this@MainActivity,
+                    if (selected) R.color.color_copper_bright else R.color.color_text
+                )
+            )
+        }
+        val sub = TextView(this).apply {
+            text = amp.ipAddress
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_text_faint))
+        }
+        info.addView(name)
+        info.addView(sub)
+
+        val check = TextView(this).apply {
+            text = getString(R.string.source_active_check)
+            textSize = 14f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_copper_bright))
+            visibility = if (selected) View.VISIBLE else View.INVISIBLE
+        }
+
+        row.addView(dot)
+        row.addView(info)
+        row.addView(check)
+
+        row.setOnClickListener {
+            selectAmp(amp.ipAddress, amp.deviceName)
+            dialog.dismiss()
+        }
+
+        return row
     }
 
-    private fun showManualIpDialog() {
-        val input = EditText(this).apply {
-            hint = getString(R.string.hint_amp_ip)
-            inputType = InputType.TYPE_CLASS_TEXT
-            setText(selectedIp)
-        }
-        val padded = FrameLayout(this).apply {
-            val horizontalPad = dp(20)
-            setPadding(horizontalPad, dp(8), horizontalPad, 0)
-            addView(input)
-        }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.dialog_enter_ip_manually)
-            .setView(padded)
-            .setPositiveButton(R.string.dialog_ok) { _, _ ->
-                val ip = input.text.toString().trim()
-                if (ip.isNotEmpty()) selectAmp(ip, "")
-            }
-            .setNegativeButton(R.string.dialog_cancel, null)
-            .show()
+    private fun showKeyboard(view: View) {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
     }
 
     // ---- Source picker (bottom sheet) ----
@@ -632,6 +864,7 @@ class MainActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.sheet_source_picker, null)
         val subtitle = view.findViewById<TextView>(R.id.txtSheetSubtitle)
         val container = view.findViewById<LinearLayout>(R.id.sourcesContainerSheet)
+        val emptyState = view.findViewById<LinearLayout>(R.id.sourceEmptySheetState)
 
         subtitle.text = selectedName.ifBlank { selectedIp }
 
@@ -644,11 +877,20 @@ class MainActivity : AppCompatActivity() {
 
         sourceSheetDialog = dialog
         sourcesContainer = container
-        // Force an immediate rebuild (rather than waiting for the next
-        // status broadcast) using whatever we last heard, so the sheet isn't
-        // empty for up to a second after opening.
-        container.tag = null
-        latestStatus?.let { rebuildSourceList(it) }
+
+        if (!hasSelectedAmp) {
+            // Nothing to list sources for - show the empty state instead.
+            container.visibility = View.GONE
+            emptyState.visibility = View.VISIBLE
+        } else {
+            container.visibility = View.VISIBLE
+            emptyState.visibility = View.GONE
+            // Force an immediate rebuild (rather than waiting for the next
+            // status broadcast) using whatever we last heard, so the sheet
+            // isn't empty for up to a second after opening.
+            container.tag = null
+            latestStatus?.let { rebuildSourceList(it) }
+        }
 
         dialog.show()
     }
@@ -685,7 +927,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         txtTriggerName.text = status.currentSourceName
-        txtDialSource.text = status.currentSourceName.uppercase()
+        txtDialSource.text = status.currentSourceName
         val activeIndex = status.enabledSources.indexOfFirst { it.isSelected }
         if (activeIndex >= 0) {
             txtTriggerIcon.text = sourceIconGlyphs[activeIndex % sourceIconGlyphs.size]
@@ -775,7 +1017,7 @@ class MainActivity : AppCompatActivity() {
             // Snappy immediate feedback, same as before - the real
             // confirmation still comes from the amp's next status broadcast.
             txtTriggerName.text = source.name
-            txtDialSource.text = source.name.uppercase()
+            txtDialSource.text = source.name
             txtTriggerIcon.text = glyph
             dismissSourceSheet()
             requireIp {

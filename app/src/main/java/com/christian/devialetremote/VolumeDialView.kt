@@ -120,6 +120,7 @@ class VolumeDialView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (!isEnabled) return false
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 // This view normally lives inside a ScrollView - claim the

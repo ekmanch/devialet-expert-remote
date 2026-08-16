@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="16dp" />
+    <!-- angle="270" is Android's top-to-bottom gradient direction, matching
+         the mockup's linear-gradient(180deg, copper-bright -> copper). -->
+    <gradient
+        android:type="linear"
+        android:angle="270"
+        android:startColor="@color/color_copper_bright"
+        android:endColor="@color/color_copper" />
+</shape>

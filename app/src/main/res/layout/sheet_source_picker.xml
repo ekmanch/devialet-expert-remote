@@ -53,4 +53,47 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" />
 
+    <!-- Shown instead of sourcesContainerSheet when no amplifier is
+         selected - there's nothing to list sources for. -->
+    <LinearLayout
+        android:id="@+id/sourceEmptySheetState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingTop="20dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_empty_state_icon"
+            android:gravity="center"
+            android:text="@string/source_icon_default"
+            android:textColor="@color/color_text_faint"
+            android:textSize="20sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:text="@string/source_empty_title"
+            android:textColor="@color/color_text_dim"
+            android:textSize="15sp"
+            android:fontFamily="@font/space_grotesk_semibold" />
+
+        <TextView
+            android:layout_width="240dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/source_empty_sub"
+            android:textColor="@color/color_text_faint"
+            android:textSize="12.5sp"
+            android:lineSpacingMultiplier="1.3" />
+
+    </LinearLayout>
+
 </LinearLayout>

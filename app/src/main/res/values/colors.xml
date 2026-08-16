@@ -30,6 +30,9 @@
     <!-- Switch thumb -->
     <color name="color_switch_thumb_off">#E8E6E1</color>
 
+    <!-- Text on the copper-gradient primary button (bg_primary_button) -->
+    <color name="color_on_copper">#1A120B</color>
+
     <!-- "Active" tinted state for action buttons (mute engaged, etc.) -->
     <color name="color_copper_active_bg">#24C17F4E</color>
     <color name="color_copper_active_border">#66C17F4E</color>

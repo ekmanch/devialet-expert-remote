@@ -155,94 +155,107 @@
                 android:layout_marginTop="14dp"
                 android:text="@string/label_volume" />
 
-            <FrameLayout
-                android:layout_width="178dp"
-                android:layout_height="178dp"
-                android:layout_gravity="center_horizontal">
-
-                <com.christian.devialetremote.VolumeDialView
-                    android:id="@+id/volumeDial"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:contentDescription="@string/label_volume" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:orientation="vertical"
-                    android:gravity="center_horizontal">
-
-                    <TextView
-                        android:id="@+id/txtVolumeDb"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/volume_db_default"
-                        android:textColor="@color/color_copper_bright"
-                        android:textSize="27sp"
-                        android:fontFamily="@font/jetbrains_mono_medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="1dp"
-                        android:text="@string/dial_unit_db"
-                        android:textColor="@color/color_text_dim"
-                        android:textSize="11sp"
-                        android:fontFamily="@font/jetbrains_mono_regular" />
-
-                    <TextView
-                        android:id="@+id/txtDialSource"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="@string/dial_no_source"
-                        android:textColor="@color/color_text_faint"
-                        android:textSize="11sp"
-                        android:letterSpacing="0.15"
-                        android:fontFamily="@font/space_grotesk_medium" />
-                </LinearLayout>
-            </FrameLayout>
-
+            <!-- Dial + vol buttons wrapped together so they can be dimmed
+                 and disabled as one unit when no amplifier is selected (see
+                 MainActivity.updateConnectionState). -->
             <LinearLayout
+                android:id="@+id/dialWrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="10dp">
+                android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/btnVolDown"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="7dp"
-                    android:background="@drawable/bg_card"
-                    android:gravity="center"
-                    android:text="@string/btn_vol_down"
-                    android:textColor="@color/color_text"
-                    android:textSize="20sp"
-                    android:fontFamily="@font/space_grotesk_semibold"
-                    android:clickable="true"
-                    android:focusable="true" />
+                <FrameLayout
+                    android:layout_width="178dp"
+                    android:layout_height="178dp"
+                    android:layout_gravity="center_horizontal">
 
-                <TextView
-                    android:id="@+id/btnVolUp"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="7dp"
-                    android:background="@drawable/bg_card"
-                    android:gravity="center"
-                    android:text="@string/btn_vol_up"
-                    android:textColor="@color/color_text"
-                    android:textSize="20sp"
-                    android:fontFamily="@font/space_grotesk_semibold"
-                    android:clickable="true"
-                    android:focusable="true" />
+                    <com.christian.devialetremote.VolumeDialView
+                        android:id="@+id/volumeDial"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@string/label_volume" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal">
+
+                        <TextView
+                            android:id="@+id/txtVolumeDb"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/volume_db_default"
+                            android:textColor="@color/color_copper_bright"
+                            android:textSize="27sp"
+                            android:fontFamily="@font/jetbrains_mono_medium" />
+
+                        <TextView
+                            android:id="@+id/txtDialUnit"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
+                            android:text="@string/dial_unit_db"
+                            android:textColor="@color/color_text_dim"
+                            android:textSize="11sp"
+                            android:fontFamily="@font/jetbrains_mono_regular" />
+
+                        <TextView
+                            android:id="@+id/txtDialSource"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/no_source_label"
+                            android:textAllCaps="true"
+                            android:textColor="@color/color_text_faint"
+                            android:textSize="11sp"
+                            android:letterSpacing="0.15"
+                            android:fontFamily="@font/space_grotesk_medium" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="10dp">
+
+                    <TextView
+                        android:id="@+id/btnVolDown"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="7dp"
+                        android:background="@drawable/bg_card"
+                        android:gravity="center"
+                        android:text="@string/btn_vol_down"
+                        android:textColor="@color/color_text"
+                        android:textSize="20sp"
+                        android:fontFamily="@font/space_grotesk_semibold"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/btnVolUp"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="7dp"
+                        android:background="@drawable/bg_card"
+                        android:gravity="center"
+                        android:text="@string/btn_vol_up"
+                        android:textColor="@color/color_text"
+                        android:textSize="20sp"
+                        android:fontFamily="@font/space_grotesk_semibold"
+                        android:clickable="true"
+                        android:focusable="true" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Mute / Power -->
             <LinearLayout
+                android:id="@+id/actionRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -355,7 +368,7 @@
                         android:id="@+id/txtTriggerName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/dial_no_source"
+                        android:text="@string/no_source_label"
                         android:textColor="@color/color_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -370,6 +383,7 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/txtControlFooterNote"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
@@ -390,6 +404,12 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:visibility="gone">
+
+          <LinearLayout
+              android:id="@+id/soundControls"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical">
 
             <!-- Speaker Matching -->
             <TextView
@@ -706,7 +726,53 @@
                 </LinearLayout>
             </LinearLayout>
 
+          </LinearLayout>
+
+            <!-- Shown instead of soundControls when no amplifier is
+                 selected - there's nothing to control. -->
+            <LinearLayout
+                android:id="@+id/soundEmptyState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingTop="48dp"
+                android:paddingBottom="24dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/bg_empty_state_icon"
+                    android:gravity="center"
+                    android:text="@string/sound_empty_icon"
+                    android:textColor="@color/color_text_faint"
+                    android:textSize="30sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/sound_empty_title"
+                    android:textColor="@color/color_text_dim"
+                    android:textSize="15sp"
+                    android:fontFamily="@font/space_grotesk_semibold" />
+
+                <TextView
+                    android:layout_width="240dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/sound_empty_sub"
+                    android:textColor="@color/color_text_faint"
+                    android:textSize="12.5sp"
+                    android:lineSpacingMultiplier="1.3" />
+
+            </LinearLayout>
+
             <TextView
+                android:id="@+id/txtSoundFooterNote"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
