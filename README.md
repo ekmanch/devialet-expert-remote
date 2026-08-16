@@ -61,9 +61,7 @@ Neither path requires Google Play or any store listing.
   status broadcast and offer to use its sender IP), that's a small addition
   to `DevialetStatusListener`.
 
-## Known limitations
+## Known limitation(s)
 
 - No authentication on the protocol itself (same as the official app) -
   anyone on your LAN could send it commands. Fine for a home network.
-- Status updates land about once a second, so the UI isn't instantaneous if
-  you change something from the amp's physical remote at the same time.
