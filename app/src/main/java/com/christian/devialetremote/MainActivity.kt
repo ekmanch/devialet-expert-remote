@@ -16,6 +16,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -23,7 +24,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.view.GravityCompat
 import androidx.core.widget.ImageViewCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -47,8 +50,14 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var samSwitch: SwitchCompat
     private lateinit var txtSamState: TextView
+    private lateinit var samOpenTarget: View
     private lateinit var nightSwitch: SwitchCompat
     private lateinit var txtNightState: TextView
+
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var txtSamLevelValue: TextView
+    private lateinit var seekSamLevel: SeekBar
+    private lateinit var btnSamDrawerDone: View
 
     private lateinit var btnMute: LinearLayout
     private lateinit var imgMuteIcon: ImageView
@@ -116,6 +125,18 @@ class MainActivity : AppCompatActivity() {
     private val volumeButtonDebounceMs = volumeRepeatIntervalMs + 300L
     private var lastVolumeButtonStepAtMs = 0L
 
+    // Same race as the button debounce above, but for dragging the volume
+    // dial directly: releasing sends the new volume, but an in-flight status
+    // broadcast reporting the pre-release volume can land right after and
+    // snap the dial back before the next broadcast (with the real value)
+    // snaps it forward again. Same amp round-trip either way, so this reuses
+    // volumeButtonDebounceMs rather than inventing a second constant.
+    private var lastVolumeSliderReleaseAtMs = 0L
+
+    // SAM level (0-100%): UI-only for now, same as the SAM on/off switch -
+    // see the note on samSwitch's listener below for why nothing is sent.
+    private var samLevel = 70
+
     // Volume steps 0..90 map to dB range -60..-15 in 0.5dB increments. This
     // range (not the full -60..0 the amp supports) matches setVolumeDb's
     // default safety clamp in DevialetController - kept identical to the
@@ -159,8 +180,14 @@ class MainActivity : AppCompatActivity() {
 
         samSwitch = findViewById(R.id.samSwitch)
         txtSamState = findViewById(R.id.txtSamState)
+        samOpenTarget = findViewById(R.id.samOpenTarget)
         nightSwitch = findViewById(R.id.nightSwitch)
         txtNightState = findViewById(R.id.txtNightState)
+
+        drawerLayout = findViewById(R.id.drawerLayout)
+        txtSamLevelValue = findViewById(R.id.txtSamLevelValue)
+        seekSamLevel = findViewById(R.id.seekSamLevel)
+        btnSamDrawerDone = findViewById(R.id.btnSamDrawerDone)
 
         btnMute = findViewById(R.id.btnMute)
         imgMuteIcon = findViewById(R.id.imgMuteIcon)
@@ -196,6 +223,19 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
+        volumeDial.onDragStart = { userIsAdjustingVolume = true }
+        volumeDial.onDrag = { fraction ->
+            volumeStep = (fraction * maxSteps).toInt().coerceIn(0, maxSteps)
+            renderVolume() // live feedback only, nothing sent to the amp yet
+        }
+        volumeDial.onDragEnd = { fraction ->
+            volumeStep = (fraction * maxSteps).toInt().coerceIn(0, maxSteps)
+            renderVolume()
+            lastVolumeSliderReleaseAtMs = SystemClock.elapsedRealtime()
+            sendVolume(stepToDb(volumeStep))
+            userIsAdjustingVolume = false
+        }
+
         btnMute.setOnClickListener {
             isMuted = !isMuted
             updateMuteButton()
@@ -212,23 +252,39 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // SAM / Night Mode: UI-only for now. The UDP command bytes for these
-        // haven't been reverse-engineered yet (unlike volume/mute/power/source
-        // below), so these switches just flip local UI state and don't talk
-        // to the amp at all - no risk of sending a command that does the
-        // wrong thing. See the TODO stubs in DevialetController for where
-        // this plugs in once the bytes are known.
+        // SAM / Night Mode / SAM level: UI-only for now. The UDP command
+        // bytes for these haven't been reverse-engineered yet (unlike
+        // volume/mute/power/source below), so none of this talks to the amp
+        // at all - no risk of sending a command that does the wrong thing.
+        // See the TODO stubs in DevialetController for where each plugs in
+        // once the bytes are known.
         samSwitch.setOnCheckedChangeListener { _, isChecked ->
-            txtSamState.text = getString(if (isChecked) R.string.state_on else R.string.state_off)
+            updateSamStateLabel(isChecked)
         }
         nightSwitch.setOnCheckedChangeListener { _, isChecked ->
             txtNightState.text = getString(if (isChecked) R.string.state_on else R.string.state_off)
         }
 
+        samOpenTarget.setOnClickListener { drawerLayout.openDrawer(GravityCompat.END) }
+        btnSamDrawerDone.setOnClickListener { drawerLayout.closeDrawer(GravityCompat.END) }
+
+        txtSamLevelValue.text = getString(R.string.sam_drawer_level_value_format, samLevel)
+        seekSamLevel.progress = samLevel
+        seekSamLevel.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                samLevel = progress
+                txtSamLevelValue.text = getString(R.string.sam_drawer_level_value_format, samLevel)
+                if (samSwitch.isChecked) updateSamStateLabel(true)
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
         sourceTrigger.setOnClickListener { toggleSourceList() }
 
         updateMuteButton()
         updatePowerButton()
+        updateSamStateLabel(samSwitch.isChecked)
 
         // Listens for every amp's status broadcasts (not just the selected
         // one - see applyStatus) to show live volume/mute/power/source, to
@@ -299,6 +355,14 @@ class MainActivity : AppCompatActivity() {
         volumeStep = (volumeStep + direction).coerceIn(0, maxSteps)
         renderVolume()
         sendVolume(stepToDb(volumeStep))
+    }
+
+    private fun updateSamStateLabel(isOn: Boolean) {
+        txtSamState.text = if (isOn) {
+            getString(R.string.sam_state_on_format, samLevel)
+        } else {
+            getString(R.string.state_off)
+        }
     }
 
     private fun updateMuteButton() {
@@ -483,7 +547,9 @@ class MainActivity : AppCompatActivity() {
 
         val recentlyPressedVolumeButton =
             SystemClock.elapsedRealtime() - lastVolumeButtonStepAtMs < volumeButtonDebounceMs
-        if (!userIsAdjustingVolume && !recentlyPressedVolumeButton) {
+        val recentlyReleasedSlider =
+            SystemClock.elapsedRealtime() - lastVolumeSliderReleaseAtMs < volumeButtonDebounceMs
+        if (!userIsAdjustingVolume && !recentlyPressedVolumeButton && !recentlyReleasedSlider) {
             volumeStep = dbToStep(status.volumeDb)
             renderVolume()
         }
@@ -583,6 +649,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         return row
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            drawerLayout.closeDrawer(GravityCompat.END)
+        } else {
+            super.onBackPressed()
+        }
     }
 
     override fun onResume() {

@@ -28,6 +28,16 @@
     <string name="toggle_night_name">Night Mode</string>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>
+    <string name="sam_state_on_format">On · %1$d%%</string>
+    <string name="toggle_chevron">›</string>
+
+    <!-- SAM level drawer -->
+    <string name="sam_drawer_eyebrow">SOUND &amp; ROOM</string>
+    <string name="sam_drawer_title">SAM</string>
+    <string name="sam_drawer_desc">Speaker Active Matching adapts the amplifier\'s output to your speakers\' real-world response, tightening bass and improving accuracy.</string>
+    <string name="sam_drawer_level_label">Level</string>
+    <string name="sam_drawer_level_value_format">%1$d%%</string>
+    <string name="sam_drawer_done">Done</string>
 
     <!-- Mute / power -->
     <string name="btn_mute">Mute</string>

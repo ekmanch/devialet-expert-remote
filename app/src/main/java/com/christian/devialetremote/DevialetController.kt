@@ -170,4 +170,18 @@ class DevialetController(@Volatile var deviceIp: String) {
     //
     // fun setSam(on: Boolean) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */)
     // fun setNightMode(on: Boolean) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */)
+
+    // ---- Not yet wired: SAM level (0-100%) ----
+    //
+    // Same situation as above - MainActivity's SAM-level SeekBar (in the
+    // slide-out drawer) only updates local UI state, nothing is sent. This
+    // one's a range value rather than a toggle, so it almost certainly needs
+    // a payload byte (or two) carrying the percentage, closer in shape to
+    // setVolumeDb's byte8/byte9 pair than setMute/setPower's plain on/off.
+    // Sniff the official app's traffic while dragging its own SAM level
+    // control to find the encoding (may not be a simple 0-100 -> byte
+    // mapping - volume's dbConvert() above is a good reminder that this
+    // protocol doesn't always use the obvious encoding).
+    //
+    // fun setSamLevel(percent: Int) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */, /* TODO: byte8 */, /* TODO: byte9 */)
 }
