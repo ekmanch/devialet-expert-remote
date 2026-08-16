@@ -6,13 +6,18 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.text.InputType
 import android.view.MotionEvent
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import java.util.concurrent.ExecutorService
@@ -25,7 +30,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusListener: DevialetStatusListener
     private lateinit var network: ExecutorService
 
-    private lateinit var editIp: EditText
+    private lateinit var deviceCard: LinearLayout
+    private lateinit var deviceDot: View
+    private lateinit var txtDeviceName: TextView
+    private lateinit var txtDeviceSub: TextView
     private lateinit var txtStatus: TextView
     private lateinit var txtVolumeDb: TextView
     private lateinit var seekVolume: SeekBar
@@ -36,6 +44,38 @@ class MainActivity : AppCompatActivity() {
     private var userIsDraggingSlider = false
     private var isMuted = false
     private var isPoweredOn = true
+
+    // The amp currently selected for control, and everything this app has
+    // heard broadcasting on the LAN recently (keyed by IP) - the latter is
+    // what populates the "Choose Amplifier" picker so nobody has to type an
+    // IP address. Both live on the UI thread only: statusListener's callback
+    // is already wrapped in runOnUiThread (see below), so no locking needed.
+    private var selectedIp: String = ""
+    private var selectedName: String = ""
+    private val discoveredAmps = LinkedHashMap<String, DiscoveredAmp>()
+
+    // An amp not heard from in this long is treated as gone (dropped from the
+    // picker list, device card flips to "Not responding"). Broadcasts land
+    // about once a second, so this comfortably survives a couple of missed
+    // packets without being so long that a genuinely offline amp lingers.
+    private val ampStaleTimeoutMs = 8_000L
+
+    // Redraws the device card's connected/not-responding dot periodically,
+    // since that state can go stale even when no new packet arrives to
+    // trigger a redraw the normal way (e.g. the selected amp just went dark).
+    private val cardRefreshHandler = Handler(Looper.getMainLooper())
+    private val cardRefreshRunnable = object : Runnable {
+        override fun run() {
+            updateDeviceCard()
+            cardRefreshHandler.postDelayed(this, 2_000L)
+        }
+    }
+
+    // Re-renders the amplifier picker dialog while it's open, so amps that
+    // appear (or go stale) while the user is looking at the list show up
+    // without them having to close and reopen it.
+    private val pickerRefreshHandler = Handler(Looper.getMainLooper())
+    private var pickerRefreshRunnable: Runnable? = null
 
     // Press-and-hold repeat for VOL -/+. Steps are 0.5dB (one slider progress
     // unit), so a 100ms interval works out to 5dB/sec while held.
@@ -66,6 +106,8 @@ class MainActivity : AppCompatActivity() {
     private fun progressToDb(progress: Int): Double = (progress * 0.5) - 60.0
     private fun dbToProgress(db: Double): Int = ((db + 60.0) * 2).toInt().coerceIn(0, 90)
 
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
     // Suppresses "Button does not override performClick" - it's a stock Button,
     // not a custom View subclass, and it already inherits a working
     // performClick() from View. We do call it explicitly below (on ACTION_UP),
@@ -79,7 +121,10 @@ class MainActivity : AppCompatActivity() {
         prefs = getSharedPreferences("devialet_remote", MODE_PRIVATE)
         network = Executors.newSingleThreadExecutor()
 
-        editIp = findViewById(R.id.editIp)
+        deviceCard = findViewById(R.id.deviceCard)
+        deviceDot = findViewById(R.id.deviceDot)
+        txtDeviceName = findViewById(R.id.txtDeviceName)
+        txtDeviceSub = findViewById(R.id.txtDeviceSub)
         txtStatus = findViewById(R.id.txtStatus)
         txtVolumeDb = findViewById(R.id.txtVolumeDb)
         seekVolume = findViewById(R.id.seekVolume)
@@ -87,20 +132,12 @@ class MainActivity : AppCompatActivity() {
         btnPower = findViewById(R.id.btnPower)
         sourcesContainer = findViewById(R.id.sourcesContainer)
 
-        val savedIp = prefs.getString("amp_ip", "") ?: ""
-        editIp.setText(savedIp)
-        controller = DevialetController(savedIp)
+        selectedIp = prefs.getString("amp_ip", "") ?: ""
+        selectedName = prefs.getString("amp_name", "") ?: ""
+        controller = DevialetController(selectedIp)
+        updateDeviceCard()
 
-        findViewById<Button>(R.id.btnSaveIp).setOnClickListener {
-            val ip = editIp.text.toString().trim()
-            if (ip.isEmpty()) {
-                Toast.makeText(this, R.string.toast_enter_ip_first, Toast.LENGTH_SHORT).show()
-            } else {
-                prefs.edit { putString("amp_ip", ip) }
-                controller.deviceIp = ip
-                Toast.makeText(this, getString(R.string.toast_saved_talking, ip), Toast.LENGTH_SHORT).show()
-            }
-        }
+        deviceCard.setOnClickListener { showAmpPickerDialog() }
 
         seekVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -149,9 +186,11 @@ class MainActivity : AppCompatActivity() {
         updateMuteButton()
         updatePowerButton()
 
-        // Listens for the amp's own status broadcasts to show live volume/mute/
-        // power/source and to populate the source buttons. Purely informational -
-        // control buttons above work even if this never receives anything.
+        // Listens for every amp's status broadcasts (not just the selected
+        // one - see applyStatus) to show live volume/mute/power/source, to
+        // populate the source buttons, and to build the amplifier picker
+        // list. Purely informational/discovery - control buttons above work
+        // even if this never receives anything.
         statusListener = DevialetStatusListener { status, senderIp ->
             runOnUiThread { applyStatus(status, senderIp) }
         }
@@ -159,7 +198,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun requireIp(action: () -> Unit) {
         if (controller.deviceIp.isBlank()) {
-            Toast.makeText(this, R.string.toast_enter_ip_before_control, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_select_amp_first, Toast.LENGTH_SHORT).show()
         } else {
             action()
         }
@@ -217,9 +256,148 @@ class MainActivity : AppCompatActivity() {
         btnPower.setText(if (isPoweredOn) R.string.btn_power_off else R.string.btn_power_on)
     }
 
+    // ---- Amplifier discovery & selection ----
+
+    private fun isAmpRecentlyHeard(ip: String): Boolean {
+        val amp = discoveredAmps[ip] ?: return false
+        return SystemClock.elapsedRealtime() - amp.lastSeenAtMs < ampStaleTimeoutMs
+    }
+
+    private fun updateDeviceCard() {
+        if (selectedIp.isBlank()) {
+            txtDeviceName.text = getString(R.string.device_none_selected)
+            txtDeviceSub.text = getString(R.string.device_tap_to_choose)
+            deviceDot.setBackgroundResource(R.drawable.dot_disconnected)
+            return
+        }
+        txtDeviceName.text = selectedName.ifBlank { selectedIp }
+        val connected = isAmpRecentlyHeard(selectedIp)
+        txtDeviceSub.text = getString(
+            R.string.device_sub_format,
+            selectedIp,
+            getString(if (connected) R.string.device_connected else R.string.device_not_responding)
+        )
+        deviceDot.setBackgroundResource(if (connected) R.drawable.dot_connected else R.drawable.dot_disconnected)
+    }
+
+    private fun selectAmp(ip: String, name: String) {
+        selectedIp = ip
+        selectedName = name.ifBlank { discoveredAmps[ip]?.deviceName ?: "" }
+        prefs.edit {
+            putString("amp_ip", selectedIp)
+            putString("amp_name", selectedName)
+        }
+        controller.deviceIp = selectedIp
+        updateDeviceCard()
+        Toast.makeText(this, getString(R.string.toast_saved_talking, selectedIp), Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Shows every amp heard from in the last [ampStaleTimeoutMs], refreshing
+     * live while open, plus a manual-IP fallback for the rare case discovery
+     * doesn't work (different subnet/VLAN, amp hasn't broadcast yet, etc.).
+     */
+    private fun showAmpPickerDialog() {
+        val listContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+        val scroll = ScrollView(this).apply { addView(listContainer) }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_choose_amp_title)
+            .setView(scroll)
+            .setNeutralButton(R.string.dialog_enter_ip_manually) { _, _ -> showManualIpDialog() }
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .create()
+
+        fun render() {
+            listContainer.removeAllViews()
+            val fresh = discoveredAmps.values
+                .filter { isAmpRecentlyHeard(it.ipAddress) }
+                .sortedBy { it.deviceName.ifBlank { it.ipAddress } }
+
+            if (fresh.isEmpty()) {
+                listContainer.addView(TextView(this).apply {
+                    text = getString(R.string.dialog_searching)
+                    setPadding(dp(12), dp(20), dp(12), dp(20))
+                })
+            } else {
+                for (amp in fresh) {
+                    listContainer.addView(buildAmpRow(amp, dialog))
+                }
+            }
+        }
+
+        render()
+        val refresh = object : Runnable {
+            override fun run() {
+                render()
+                pickerRefreshHandler.postDelayed(this, 1_000L)
+            }
+        }
+        pickerRefreshRunnable = refresh
+        pickerRefreshHandler.postDelayed(refresh, 1_000L)
+
+        dialog.setOnDismissListener {
+            pickerRefreshRunnable?.let { pickerRefreshHandler.removeCallbacks(it) }
+            pickerRefreshRunnable = null
+        }
+
+        dialog.show()
+    }
+
+    private fun buildAmpRow(amp: DiscoveredAmp, dialog: AlertDialog): View {
+        return TextView(this).apply {
+            text = if (amp.ipAddress == selectedIp) {
+                getString(R.string.amp_row_selected_format, amp.deviceName, amp.ipAddress)
+            } else {
+                getString(R.string.amp_row_format, amp.deviceName, amp.ipAddress)
+            }
+            textSize = 16f
+            setPadding(dp(12), dp(14), dp(12), dp(14))
+            isClickable = true
+            isFocusable = true
+            setBackgroundResource(android.R.drawable.list_selector_background)
+            setOnClickListener {
+                selectAmp(amp.ipAddress, amp.deviceName)
+                dialog.dismiss()
+            }
+        }
+    }
+
+    private fun showManualIpDialog() {
+        val input = EditText(this).apply {
+            hint = getString(R.string.hint_amp_ip)
+            inputType = InputType.TYPE_CLASS_TEXT
+            setText(selectedIp)
+        }
+        val padded = FrameLayout(this).apply {
+            val horizontalPad = dp(20)
+            setPadding(horizontalPad, dp(8), horizontalPad, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_enter_ip_manually)
+            .setView(padded)
+            .setPositiveButton(R.string.dialog_ok) { _, _ ->
+                val ip = input.text.toString().trim()
+                if (ip.isNotEmpty()) selectAmp(ip, "")
+            }
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .show()
+    }
+
+    // ---- Status broadcasts ----
+
     private fun applyStatus(status: DevialetStatus, senderIp: String) {
-        val savedIp = editIp.text.toString().trim()
-        if (savedIp.isNotEmpty() && senderIp != savedIp) return // ignore other amps on the LAN
+        // Every amp on the LAN broadcasts, regardless of what's selected -
+        // record it so it shows up in the picker, then refresh the device
+        // card if it's the one currently selected.
+        discoveredAmps[senderIp] = DiscoveredAmp(senderIp, status.deviceName, SystemClock.elapsedRealtime())
+        if (senderIp == selectedIp) updateDeviceCard()
+
+        if (selectedIp.isBlank() || senderIp != selectedIp) return // ignore other amps' live status
 
         txtStatus.text = getString(
             R.string.status_format,
@@ -277,12 +455,15 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         statusListener.start()
+        cardRefreshHandler.postDelayed(cardRefreshRunnable, 2_000L)
     }
 
     override fun onPause() {
         super.onPause()
         statusListener.stop()
         stopVolumeRepeat() // don't keep firing volume changes while backgrounded
+        cardRefreshHandler.removeCallbacks(cardRefreshRunnable)
+        pickerRefreshRunnable?.let { pickerRefreshHandler.removeCallbacks(it) }
     }
 
     override fun onDestroy() {

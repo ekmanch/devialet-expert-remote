@@ -18,20 +18,55 @@
             android:textStyle="bold"
             android:layout_marginBottom="16dp" />
 
-        <EditText
-            android:id="@+id/editIp"
+        <LinearLayout
+            android:id="@+id/deviceCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_amp_ip"
-            android:inputType="text"
-            android:importantForAutofill="no" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_device_card"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="14dp">
 
-        <Button
-            android:id="@+id/btnSaveIp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/btn_save_ip" />
+            <View
+                android:id="@+id/deviceDot"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/dot_disconnected" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txtDeviceName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/device_none_selected"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtDeviceSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/device_tap_to_choose"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/device_change"
+                android:textSize="13sp" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/txtStatus"
