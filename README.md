@@ -11,18 +11,27 @@ This talks to the amp directly using its local UDP control protocol
 
 ## What it does
 
-- Manual IP entry for the amp (saved locally)
+- Auto-discovers amps on the LAN (tap the device card, pick from the list -
+  no typing an IP) with a manual-entry fallback for edge cases
 - Volume slider (-60 dB to -15 dB) + step buttons
 - Mute / unmute toggle
 - Power on/off toggle
 - Source buttons, auto-populated once the amp's status broadcast is received
   (arrives ~once per second on port 45454)
 
-## Finding your amp's IP
+## Choosing your amp
 
-Check your router's DHCP client list / connected devices page, or the amp's
-own network settings menu on its front display. Consider setting a DHCP
-reservation for it so the IP doesn't change later.
+Tap the device card at the top of the app to open "Choose Amplifier" - it
+lists every amp the app has heard broadcasting on the LAN in the last few
+seconds (name + IP), refreshing live while the list is open. Pick one; it's
+remembered for next time.
+
+If your amp doesn't show up (different subnet/VLAN, or it just hasn't sent a
+broadcast yet (they go out ~once per second), use "Enter IP Manually" in the
+same dialog. You can find the IP via your router's DHCP client list /
+connected devices page, or the amp's own network settings menu on its front
+display. Consider setting a DHCP reservation for it so the IP doesn't change
+later.
 
 ## Building it
 
@@ -56,14 +65,14 @@ Neither path requires Google Play or any store listing.
 - **Source list:** pulled live from the amp's status broadcast, so it'll
   automatically reflect whatever inputs you've named/enabled in the amp's own
   configuration menu.
-- **Discovery:** this version requires typing the IP manually rather than
-  auto-discovering. If you'd like auto-discovery added (listen for the first
-  status broadcast and offer to use its sender IP), that's a small addition
-  to `DevialetStatusListener`.
+- **Discovery staleness window:** an amp not heard from in 8 seconds drops
+  out of the picker and the device card flips to "Not responding"
+  (`ampStaleTimeoutMs` in `MainActivity.kt`). Broadcasts land about once a
+  second, so this is a couple of missed packets' worth of slack - shorten it
+  if you want the UI to react faster to an amp going offline, lengthen it if
+  you're on a flaky network and it's dropping amps that are still there.
 
-## Known limitations
+## Known limitation(s)
 
 - No authentication on the protocol itself (same as the official app) -
   anyone on your LAN could send it commands. Fine for a home network.
-- Status updates land about once a second, so the UI isn't instantaneous if
-  you change something from the amp's physical remote at the same time.
