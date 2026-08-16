@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Deliberately a plain (non-dashed) ring: a dashed stroke on an oval shape
+     drawable renders unreliably under hardware acceleration on some API
+     levels, so an empty outline is used instead to convey "nothing selected"
+     - still visually distinct from both dot_connected (filled copper) and
+     dot_disconnected (filled grey). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="1.5dp"
+        android:color="@color/color_text_faint" />
+</shape>

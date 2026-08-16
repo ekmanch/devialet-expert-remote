@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Content view for the amplifier-picker BottomSheetDialog (see
+     MainActivity.showAmpSheet). Same no-scrim/no-background approach as
+     sheet_source_picker.xml - BottomSheetDialog and
+     Widget.DevialetRemote.BottomSheet (themes.xml) supply those. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="18dp"
+    android:paddingEnd="18dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="24dp">
+
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/shape_sheet_handle" />
+
+    <!-- ============ LIST VIEW ============ -->
+    <LinearLayout
+        android:id="@+id/ampListView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dialog_choose_amp_title"
+            android:textColor="@color/color_text"
+            android:textSize="17sp"
+            android:fontFamily="@font/space_grotesk_semibold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="14dp"
+            android:text="@string/amp_sheet_subtitle"
+            android:textColor="@color/color_text_faint"
+            android:textSize="12sp"
+            android:fontFamily="@font/jetbrains_mono_regular" />
+
+        <!-- "None" always sits first, above whatever amps have been heard on
+             the network - see MainActivity.showAmpSheet's render(). -->
+        <LinearLayout
+            android:id="@+id/ampNoneRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_source_row"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="13dp"
+            android:paddingBottom="13dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <View
+                android:id="@+id/ampNoneDot"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/dot_none" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/ampNoneName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/amp_none_name"
+                    android:textColor="@color/color_text_dim"
+                    android:textSize="15sp"
+                    android:textStyle="italic" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/amp_none_sub"
+                    android:textColor="@color/color_text_faint"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/jetbrains_mono_regular" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/ampNoneCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/source_active_check"
+                android:textColor="@color/color_copper_bright"
+                android:textSize="14sp"
+                android:visibility="invisible" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="10dp"
+            android:background="@color/color_divider" />
+
+        <!-- Populated at runtime by MainActivity.showAmpSheet's render() -
+             one row per amp heard from recently, or a "searching…" message
+             when none have been heard yet. -->
+        <LinearLayout
+            android:id="@+id/ampListContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="10dp"
+            android:background="@color/color_divider" />
+
+        <LinearLayout
+            android:id="@+id/ampManualEntryRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_source_row"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="13dp"
+            android:paddingBottom="13dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/shape_source_icon"
+                android:gravity="center"
+                android:text="@string/amp_manual_icon"
+                android:textColor="@color/color_text_dim"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dialog_enter_ip_manually"
+                android:textColor="@color/color_text"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/source_chevron"
+                android:textColor="@color/color_text_faint"
+                android:textSize="15sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ============ MANUAL IP ENTRY VIEW ============ -->
+    <LinearLayout
+        android:id="@+id/ampManualView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/btnAmpBack"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/shape_source_icon"
+                android:gravity="center"
+                android:text="@string/amp_back_chevron"
+                android:textColor="@color/color_text_dim"
+                android:textSize="15sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="@string/amp_back_description" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/amp_manual_title"
+                android:textColor="@color/color_text"
+                android:textSize="17sp"
+                android:fontFamily="@font/space_grotesk_semibold" />
+
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/inputManualIp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_input_field"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:hint="@string/amp_manual_ip_placeholder"
+            android:textColorHint="@color/color_text_faint"
+            android:textColor="@color/color_text"
+            android:textSize="16sp"
+            android:fontFamily="@font/jetbrains_mono_regular"
+            android:inputType="text"
+            android:maxLines="1"
+            android:autofillHints="" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/amp_manual_ip_hint"
+            android:textColor="@color/color_text_faint"
+            android:textSize="11.5sp"
+            android:fontFamily="@font/jetbrains_mono_regular" />
+
+        <TextView
+            android:id="@+id/btnConnectIp"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_primary_button"
+            android:gravity="center"
+            android:text="@string/btn_connect"
+            android:textColor="@color/color_on_copper"
+            android:textSize="14.5sp"
+            android:fontFamily="@font/space_grotesk_semibold"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -150,4 +150,50 @@ class DevialetController(@Volatile var deviceIp: String) {
         // startup volume the amp would otherwise pick for this input.
         setVolumeDb(SOURCE_SWITCH_VOLUME_DB)
     }
+
+    // ---- Not yet wired: SAM / Night Mode ----
+    //
+    // The UI has switches for these (MainActivity's samSwitch/nightSwitch),
+    // but on purpose they only flip local UI state right now and never call
+    // down into here - the UDP command bytes for SAM and Night Mode haven't
+    // been reverse-engineered yet (unlike power/mute/volume/source above,
+    // which came from gnulabis/devimote and jprouty/devialet_expert). Sending
+    // guessed bytes risks the amp doing something unintended, so nothing goes
+    // out over the wire for these two until the real values are confirmed
+    // (packet-sniffing the official app while toggling each setting is the
+    // most direct way to get them).
+    //
+    // Once known, wiring these up is the same shape as setMute/setPower
+    // above - a single sendTwice(byte6, byte7) call - and MainActivity's two
+    // switch listeners just need a `network.submit { ... }` call added,
+    // exactly like btnMute's and btnPower's click listeners already do.
+    //
+    // fun setSam(on: Boolean) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */)
+    // fun setNightMode(on: Boolean) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */)
+
+    // ---- Not yet wired: SAM level (0-100%) ----
+    //
+    // Same situation as above - MainActivity's SAM-level SeekBar (inline on
+    // the Sound tab) only updates local UI state, nothing is sent. This
+    // one's a range value rather than a toggle, so it almost certainly needs
+    // a payload byte (or two) carrying the percentage, closer in shape to
+    // setVolumeDb's byte8/byte9 pair than setMute/setPower's plain on/off.
+    // Sniff the official app's traffic while dragging its own SAM level
+    // control to find the encoding (may not be a simple 0-100 -> byte
+    // mapping - volume's dbConvert() above is a good reminder that this
+    // protocol doesn't always use the obvious encoding).
+    //
+    // fun setSamLevel(percent: Int) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */, /* TODO: byte8 */, /* TODO: byte9 */)
+
+    // ---- Not yet wired: Bass / Treble ----
+    //
+    // Same situation as SAM/Night Mode/SAM level above - MainActivity's Bass
+    // and Treble SeekBars (Sound tab) only update local UI state, nothing is
+    // sent. Each is a signed dB value (-18..+18, see MainActivity.toneMinDb/
+    // toneMaxDb) rather than a 0-100% range, so the encoding is more likely
+    // to resemble setVolumeDb's signed dbConvert() path than SAM level's
+    // plain percentage - but that's a guess until it's actually sniffed.
+    //
+    // fun setBassDb(db: Int) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */, /* TODO: byte8 */, /* TODO: byte9 */)
+    // fun setTrebleDb(db: Int) = sendTwice(/* TODO: byte6 */, /* TODO: byte7 */, /* TODO: byte8 */, /* TODO: byte9 */)
 }

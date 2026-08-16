@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Content view for the source-picker BottomSheetDialog (see
+     MainActivity.showSourceSheet). No scrim or gravity="bottom" wrapper
+     needed here - BottomSheetDialog supplies its own scrim, drag-to-dismiss,
+     and bottom positioning; this is just what goes inside it. No background
+     on the root either: that comes from Widget.DevialetRemote.BottomSheet's
+     android:background (see themes.xml), applied to the sheet container that
+     wraps this content, not to the content itself. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="18dp"
+    android:paddingEnd="18dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="24dp">
+
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/shape_sheet_handle" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/source_sheet_title"
+        android:textColor="@color/color_text"
+        android:textSize="17sp"
+        android:fontFamily="@font/space_grotesk_semibold" />
+
+    <TextView
+        android:id="@+id/txtSheetSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="14dp"
+        android:textColor="@color/color_text_faint"
+        android:textSize="12sp"
+        android:fontFamily="@font/jetbrains_mono_regular"
+        tools:text="My Devialet-ETH" />
+
+    <!-- Rows are added/removed here at runtime by MainActivity, same
+         buildSourceRow() used previously for the inline dropdown. Not
+         wrapped in a ScrollView: the amp's source list is a short, fixed
+         set (see MainActivity.sourceIconGlyphs), so this is expected to
+         always fit without scrolling on any phone. -->
+    <LinearLayout
+        android:id="@+id/sourcesContainerSheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <!-- Shown instead of sourcesContainerSheet when no amplifier is
+         selected - there's nothing to list sources for. -->
+    <LinearLayout
+        android:id="@+id/sourceEmptySheetState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingTop="20dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_empty_state_icon"
+            android:gravity="center"
+            android:text="@string/source_icon_default"
+            android:textColor="@color/color_text_faint"
+            android:textSize="20sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:text="@string/source_empty_title"
+            android:textColor="@color/color_text_dim"
+            android:textSize="15sp"
+            android:fontFamily="@font/space_grotesk_semibold" />
+
+        <TextView
+            android:layout_width="240dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/source_empty_sub"
+            android:textColor="@color/color_text_faint"
+            android:textSize="12.5sp"
+            android:lineSpacingMultiplier="1.3" />
+
+    </LinearLayout>
+
+</LinearLayout>
