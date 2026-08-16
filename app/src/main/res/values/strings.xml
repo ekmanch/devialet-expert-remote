@@ -3,8 +3,6 @@
 
     <!-- activity_main.xml -->
     <string name="title_app">Devialet Expert Pro Remote</string>
-    <string name="hint_amp_ip">Amp IP address, e.g. 192.168.1.50</string>
-    <string name="btn_save_ip">Save IP</string>
     <string name="status_placeholder">No status received yet.</string>
     <string name="label_volume">Volume</string>
     <string name="volume_db_default">-20 dB</string>
@@ -15,10 +13,27 @@
     <string name="label_sources">Sources</string>
     <string name="sources_hint">(populates once the amp\'s status broadcast is received)</string>
 
+    <!-- Device card -->
+    <string name="device_none_selected">No amplifier selected</string>
+    <string name="device_tap_to_choose">Tap to choose one</string>
+    <string name="device_sub_format">%1$s · %2$s</string>
+    <string name="device_connected">Connected</string>
+    <string name="device_not_responding">Not responding</string>
+    <string name="device_change">Change ›</string>
+
+    <!-- Amplifier picker dialog -->
+    <string name="dialog_choose_amp_title">Choose Amplifier</string>
+    <string name="dialog_searching">Searching for amplifiers on your network…</string>
+    <string name="dialog_enter_ip_manually">Enter IP Manually</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_ok">OK</string>
+    <string name="amp_row_format">%1$s\n%2$s</string>
+    <string name="amp_row_selected_format">%1$s ✓\n%2$s</string>
+    <string name="hint_amp_ip">Amp IP address, e.g. 192.168.1.50</string>
+
     <!-- MainActivity.kt -->
-    <string name="toast_enter_ip_first">Enter an IP address first</string>
+    <string name="toast_select_amp_first">Choose an amplifier first</string>
     <string name="toast_saved_talking">Saved. Talking to %1$s</string>
-    <string name="toast_enter_ip_before_control">Enter and save the amp\'s IP address first</string>
     <string name="btn_unmute">Unmute</string>
     <string name="btn_power_off">Power Off</string>
     <string name="btn_power_on">Power On</string>
