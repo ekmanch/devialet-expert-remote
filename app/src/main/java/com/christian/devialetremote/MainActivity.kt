@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
     private lateinit var controller: DevialetController
     private lateinit var statusListener: DevialetStatusListener
+    private lateinit var modelNameResolver: AmpModelNameResolver
     private lateinit var network: ExecutorService
 
     private lateinit var deviceCard: LinearLayout
@@ -411,6 +412,16 @@ class MainActivity : AppCompatActivity() {
         statusListener = DevialetStatusListener { status, senderIp ->
             runOnUiThread { applyStatus(status, senderIp) }
         }
+
+        // Cosmetic only (see AmpModelNameResolver doc) - a no-op below API 36.
+        // Matches are confirmed against discoveredAmps before being trusted,
+        // since _spotify-connect._tcp isn't Devialet-specific on its own.
+        modelNameResolver = AmpModelNameResolver(this) { ip, modelName ->
+            discoveredAmps[ip]?.let { existing ->
+                discoveredAmps[ip] = existing.copy(modelName = modelName)
+                if (ip == selectedIp) updateDeviceCard()
+            }
+        }
     }
 
     // ---- Tabs ----
@@ -634,7 +645,7 @@ class MainActivity : AppCompatActivity() {
             deviceDot.setBackgroundResource(R.drawable.dot_none)
             return
         }
-        txtDeviceName.text = selectedName.ifBlank { selectedIp }
+        txtDeviceName.text = discoveredAmps[selectedIp]?.modelName ?: selectedName.ifBlank { selectedIp }
         val connected = isAmpRecentlyHeard(selectedIp)
         txtDeviceSub.text = getString(
             R.string.device_sub_format,
@@ -654,6 +665,12 @@ class MainActivity : AppCompatActivity() {
         controller.deviceIp = selectedIp
         updateDeviceCard()
         updateConnectionState()
+        if (discoveredAmps[ip]?.modelName == null) {
+            // Switching to an amp we haven't resolved a model name for yet -
+            // don't make them wait out however much of the resolver's
+            // current steady-state interval happens to be left.
+            modelNameResolver.retryNow()
+        }
         Toast.makeText(this, getString(R.string.toast_saved_talking, selectedIp), Toast.LENGTH_SHORT).show()
     }
 
@@ -731,7 +748,7 @@ class MainActivity : AppCompatActivity() {
             listContainer.removeAllViews()
             val fresh = discoveredAmps.values
                 .filter { isAmpRecentlyHeard(it.ipAddress) }
-                .sortedBy { it.deviceName.ifBlank { it.ipAddress } }
+                .sortedBy { (it.modelName ?: it.deviceName).ifBlank { it.ipAddress } }
 
             if (fresh.isEmpty()) {
                 listContainer.addView(TextView(this).apply {
@@ -803,8 +820,9 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             orientation = LinearLayout.VERTICAL
         }
+        val modelName = amp.modelName
         val name = TextView(this).apply {
-            text = amp.deviceName.ifBlank { amp.ipAddress }
+            text = modelName ?: amp.deviceName.ifBlank { amp.ipAddress }
             textSize = 15f
             setTextColor(
                 ContextCompat.getColor(
@@ -814,7 +832,15 @@ class MainActivity : AppCompatActivity() {
             )
         }
         val sub = TextView(this).apply {
-            text = amp.ipAddress
+            // Once the model name is resolved and takes the primary line,
+            // the friendly name becomes genuinely useful again as the
+            // subtitle - it's what actually tells two amps of the same
+            // model apart. Falls back to just the IP otherwise, same as before.
+            text = if (modelName != null && amp.deviceName.isNotBlank()) {
+                getString(R.string.device_sub_format, amp.deviceName, amp.ipAddress)
+            } else {
+                amp.ipAddress
+            }
             textSize = 12f
             setTextColor(ContextCompat.getColor(this@MainActivity, R.color.color_text_faint))
         }
@@ -866,7 +892,7 @@ class MainActivity : AppCompatActivity() {
         val container = view.findViewById<LinearLayout>(R.id.sourcesContainerSheet)
         val emptyState = view.findViewById<LinearLayout>(R.id.sourceEmptySheetState)
 
-        subtitle.text = selectedName.ifBlank { selectedIp }
+        subtitle.text = discoveredAmps[selectedIp]?.modelName ?: selectedName.ifBlank { selectedIp }
 
         val dialog = BottomSheetDialog(this, R.style.ThemeOverlay_DevialetRemote_BottomSheet)
         dialog.setContentView(view)
@@ -905,7 +931,8 @@ class MainActivity : AppCompatActivity() {
         // Every amp on the LAN broadcasts, regardless of what's selected -
         // record it so it shows up in the picker, then refresh the device
         // card if it's the one currently selected.
-        discoveredAmps[senderIp] = DiscoveredAmp(senderIp, status.deviceName, SystemClock.elapsedRealtime())
+        val previousModelName = discoveredAmps[senderIp]?.modelName
+        discoveredAmps[senderIp] = DiscoveredAmp(senderIp, status.deviceName, SystemClock.elapsedRealtime(), previousModelName)
         if (senderIp == selectedIp) updateDeviceCard()
 
         if (selectedIp.isBlank() || senderIp != selectedIp) return // ignore other amps' live status
@@ -1031,12 +1058,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         statusListener.start()
+        modelNameResolver.start() // already begins the fast retry burst fresh - see AmpModelNameResolver.start()
         cardRefreshHandler.postDelayed(cardRefreshRunnable, 2_000L)
     }
 
     override fun onPause() {
         super.onPause()
         statusListener.stop()
+        modelNameResolver.stop()
         stopVolumeRepeat() // don't keep firing volume changes while backgrounded
         cardRefreshHandler.removeCallbacks(cardRefreshRunnable)
         pickerRefreshRunnable?.let { pickerRefreshHandler.removeCallbacks(it) }

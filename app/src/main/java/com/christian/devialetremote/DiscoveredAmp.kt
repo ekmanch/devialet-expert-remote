@@ -9,9 +9,17 @@ package com.christian.devialetremote
  *
  * [lastSeenAtMs] is in SystemClock.elapsedRealtime() terms (matches the other
  * timing fields in MainActivity), not wall-clock time.
+ *
+ * [modelName] is the amp's real make/model (e.g. "Devialet Expert 140 Pro"),
+ * resolved separately via AmpModelNameResolver - null until/unless that
+ * resolves. Kept here rather than in a parallel map so there's one place
+ * that knows everything about a given amp; callers re-creating this object
+ * on every status broadcast (see MainActivity.applyStatus) must carry the
+ * previous value forward or it gets wiped every ~1s.
  */
 data class DiscoveredAmp(
     val ipAddress: String,
     val deviceName: String,
-    val lastSeenAtMs: Long
+    val lastSeenAtMs: Long,
+    val modelName: String? = null
 )
